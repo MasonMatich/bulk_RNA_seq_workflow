@@ -1,13 +1,13 @@
 ---
-title: "go_gene_set_enrichment_analysis"
+title: "GO gene set enrichment analysis"
 author: "Mason Matich"
 date: "`r Sys.Date()`"
-site: bookdown::bookdown_site
 output: 
-  html_document:
+  html_document2:
     toc: TRUE
-    toc_depth: 2
+    toc_depth: 3
     toc_float: TRUE
+    number_sections: FALSE
 ---
 
 # Setup
@@ -22,12 +22,250 @@ library(ashr)
 library(GOSemSim)
 library(org.Ce.eg.db)
 library(bookdown)
+library(knitr)
 ```
 
-```{r read_in_functions}
+```{r}
 # Call functions
 source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/translateBioIDs.R")
 source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/geneOntologyAnalysis.R")
+source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/strainFractionGO.R")
+```
+
+## Function called for Analysis {.tabset .tabset-pills}
+
+### strainFractionGO.R
+```r
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# #         Calls translateBioIDs.R and geneOntologyAnalysis.R        # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+strainFractionGO <- function(result.obj, strain, fraction){
+  
+  # Create comment structure for bookdown render
+  cat(paste0("# ", strain," ", fraction, " {.tabset .tabset-pills}\n\n"))
+  
+  # Show exact call which invoked function
+  call_txt <- paste(deparse(match.call()), collapse = "\n")
+  cat("Inputs for function call:\n\n")
+  cat("```r\n")
+  cat(call_txt, "\n\n")
+  cat("```\n\n")
+  
+  # Translate Wormbase IDs to ENTREZID
+  result.obj.list <- translateBioIDs(
+    DESeqResults.obj = result.obj,
+    bioID = "WORMBASE"
+    )
+  
+  # Run gruopGO(), enrichGO(), gseGO(), and goplot()
+  go.result.list <- geneOntologyAnalysis(
+    geneNames.up = result.obj.list$upregulated_genes[,1],
+    geneNames.down = result.obj.list$downregulated_genes[,1],
+    geneList = result.obj.list$vectorized_all_DE,
+    universe = result.obj.list$all_genes[,1],
+    OrgDb = org.Ce.eg.db)
+  
+  # Print out Gene set enrichment analysis plot
+  cat(paste0("## GSEA \n\n"))
+  print(go.result.list$go_plot[[1]])
+
+  # Print out GO classification and GO over-representation of unregulated genes
+  cat(paste0("\n\n## Upregulated\n\n"))
+  
+  print(knitr::kable(
+    head(go.result.list$go_class_upreg[[1]], 10),
+    booktabs = TRUE,
+    caption = ' GO Classification of Upregulated Genes.'))
+  
+  cat("\n\n")
+  
+  print(knitr::kable(
+    head(go.result.list$go_overrep_upreg[[1]], 10),
+    booktabs = TRUE,
+    caption = ' GO Over-representation Analysis of Upregulated Genes.'))
+  
+  # Print out GO classification and GO over-representation of downregulated genes
+  cat(paste0("\n\n## Downregulated\n\n"))
+    
+  print(knitr::kable(
+    head(go.result.list$go_class_downreg[[1]], 10),
+    booktabs = TRUE,
+    caption = ' GO Classification of Downregulated Genes.'))
+  
+  cat("\n\n")
+  
+  print(knitr::kable(
+    head(go.result.list$go_overrep_downreg[[1]], 10),
+    booktabs = TRUE,
+    caption = ' GO Over-representation Analysis of Downregulated Genes.'))
+}
+```
+
+### translateBioIDs.R
+```r
+# # # # # # # # # # # # # # # # # # # # # # # # #
+# #         Translating Biological IDS        # #
+# # # # # # # # # # # # # # # # # # # # # # # # #
+
+# # # From WormBase to ENTREZID
+translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
+  
+  if (bioID != "WORMBASE"){
+    print("⛔️ ERROR: Only WORMBASE biological ID supported as input.")
+    return(0)
+  }
+  
+  # Convert DESeq2 results object to DataFrame, and edit structure
+  gene.df <- DESeqResults.obj %>%
+    data.frame() %>%
+    rownames_to_column("WORMBASE") %>%
+    dplyr::select(WORMBASE, log2FoldChange)
+  
+  # Biological ID TranslatoR
+  gene_ids <- bitr(gene.df[,'WORMBASE'],
+                   fromType = "WORMBASE",
+                   toType = "ENTREZID",
+                   OrgDb = org.Ce.eg.db)
+  cat("\n")
+  
+  # Record transfer success
+  if (return.success == TRUE){
+    t1 <- table(gene.df$WORMBASE %in% gene_ids$WORMBASE)
+    cat(paste0(t1[["FALSE"]]," gene IDs were not successfully transfered from WORMBASE to ENTREZID \n\n"))
+    cat(paste0(t1[["TRUE"]]," gene IDs were successfully transfered from WORMBASE to ENTREZID \n\n"))
+    cat("")
+  }
+  
+  # Clear duplicate genes following ID transfer
+  gene_ids <- gene_ids %>%
+    distinct(WORMBASE, .keep_all = T) %>%
+    column_to_rownames("WORMBASE")
+  
+  # Add ENTREZID to L2FC carrying DataFrame
+  gene.df <- gene.df %>%
+    mutate(ENTREZID = gene_ids[WORMBASE, 1]) %>%
+    dplyr::select(ENTREZID, log2FoldChange) %>%
+    subset(!is.na(ENTREZID)) # Remove NA ENTREZ ID values
+  rownames(gene.df) <- NULL
+  
+  # #    Subset L2FC Data    # # 
+  
+  # Subset for highly varirable genes
+  variable.genes <- gene.df %>%
+    subset(abs(log2FoldChange) > 1.5)
+  rownames(variable.genes) <- NULL
+  
+  # Subset for highly upregulated genes
+  upregulated.genes <- gene.df %>%
+    subset(log2FoldChange > 1.5)
+  rownames(upregulated.genes) <- NULL
+  
+  # Subset for highly downregulated genes
+  downregulated.genes <- gene.df %>%
+    subset(log2FoldChange < -1.5)
+  rownames(downregulated.genes) <- NULL
+  
+  # Subset for all genes (universe DataFrame)
+  all.genes <- gene.df
+  
+  # Vectorized differentially expressed genes
+  vectorized <- all.genes[,2]
+  names(vectorized) <- all.genes[,1]
+  vectorized <- sort(vectorized, decreasing = TRUE)
+  
+  # Save all data to list
+  gene.list <- list(variable.genes, upregulated.genes, downregulated.genes, all.genes, vectorized)
+  names(gene.list) <- c("variable_genes", "upregulated_genes", "downregulated_genes", "all_genes", "vectorized_all_DE")
+  
+  return(gene.list)
+}
+```
+### geneOntologyAnalysis.R
+```r
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# #         Gene Ontology Enrichment Analysis         # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, universe, OrgDb){
+  
+  
+  # # # # # # # # # # # # # # # # # # # # # # #
+  # # #   Analysis of Upregulated Genes   # # #
+  # # # # # # # # # # # # # # # # # # # # # # #
+  
+  # # GO Classification # #
+  go_class_upreg <- groupGO(gene = geneNames.up,
+          OrgDb = OrgDb,
+          ont = "CC",
+          level = 3,
+          readable = TRUE)
+  
+  # # GO Over-Representation Analysis # #
+  go_overrep_upreg <- enrichGO(gene = geneNames.up,
+           universe = universe,
+           OrgDb = OrgDb,
+           ont = "CC",
+           pAdjustMethod = "BH",
+           pvalueCutoff = 0.01,
+           qvalueCutoff = 0.05,
+           readable = TRUE)
+  
+  
+  # # # # # # # # # # # # # # # # # # # # # # # #
+  # # #   Analysis of Downregulated Genes   # # #
+  # # # # # # # # # # # # # # # # # # # # # # # #
+  
+  # # GO Classification # #
+  go_class_downreg <- groupGO(gene = geneNames.down,
+                               OrgDb = OrgDb,
+                               ont = "CC",
+                               level = 3,
+                               readable = TRUE)
+  
+  # # GO Over-Representation Analysis # #
+  go_overrep_downreg <- enrichGO(gene = geneNames.down,
+                                    universe = universe,
+                                    OrgDb = OrgDb,
+                                    ont = "CC",
+                                    pAdjustMethod = "BH",
+                                    pvalueCutoff = 0.01,
+                                    qvalueCutoff = 0.05,
+                                    readable = TRUE)
+  
+  # # # # # # # # # # # # # # # # # # # # # # # #
+  # #     GO Gene Set Enrichment Analysis     # #
+  # # # # # # # # # # # # # # # # # # # # # # # #
+  go_gene_set_enrichment <- gseGO(geneList = geneList,
+        OrgDb = OrgDb,
+        ont = "CC",
+        minGSSize = 100,
+        maxGSSize = 500,
+        pvalueCutoff = 0.05,
+        verbose = FALSE)
+  
+  go_plot <- goplot(go_gene_set_enrichment)
+  
+  go_results <- list(
+    list(go_class_upreg),
+    list(go_overrep_upreg), 
+    list(go_class_downreg),
+    list(go_overrep_downreg), 
+    list(go_gene_set_enrichment), 
+    list(go_plot)
+    )
+  
+  names(go_results) <- c(
+    "go_class_upreg", 
+    "go_overrep_upreg", 
+    "go_class_downreg", 
+    "go_overrep_downreg", 
+    "go_gse", 
+    "go_plot"
+    )
+  
+  return(go_results)
+}
 ```
 
 ## Read in Data
@@ -39,117 +277,76 @@ lys <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analys
 ply <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/intermediate_data/deseq2_dds_objects/lotr1_isolatedStrain_Polysome_BatchCor_dds.rds")
 ```
 
-## Get DESeq2 Results
-```{r get_DESeq_results}
-# Full KO vs WT 
-full_vs_wt.lys <- results(lys, name = "strain_DUP185_vs_DUP167")
-full_vs_wt.ply <- results(ply, name = "strain_DUP185_vs_DUP167")
+## LOTR-1 Mutants
+```{r print_mutants, warning=FALSE, message=FALSE, echo=FALSE}
+knitr::include_graphics("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/figures/lotr-1_mutants.png")
+```
 
-# Tudor KO vs WT
-tudor_vs_wt.lys <- results(lys, name = "strain_DUP207_vs_DUP167")
-tudor_vs_wt.ply <- results(ply, name = "strain_DUP207_vs_DUP167")
+
+## Get DESeq2 Results
+```{r get_DESeq_results, warning=FALSE, message=FALSE}
+# Full KO vs WT
+full_vs_wt.lys <- results(lys, name = "strain_DUP207_vs_DUP167")
+full_vs_wt.ply <- results(ply, name = "strain_DUP207_vs_DUP167")
+
+# Tudor KO vs WT 
+tudor_vs_wt.lys <- results(lys, name = "strain_DUP185_vs_DUP167")
+tudor_vs_wt.ply <- results(ply, name = "strain_DUP185_vs_DUP167")
 
 # LOTUS KO vs WT
 lotus_vs_wt.lys <- results(lys, name = "strain_DUP217_vs_DUP167")
 lotus_vs_wt.ply <- results(ply, name = "strain_DUP217_vs_DUP167")
 ```
 
-# strain/fraction/GO Analysis
-```{r}
-strain.fraction.go <- function(result.obj, strain, fraction){
-  
-  cat(paste0("#", strain))
-  cat(paste0("##", fraction, "{.tabset .tabset-pills}"))
-  
-  result.obj.list <- translateBioIDs(
-    DESeqResults.obj = result.obj,
-    bioID = "WORMBASE"
-    )
-  
-  cat(paste0("### Upregulated"))
-  
-  full_vs_wt.lys.go.result <- geneOntologyAnalysis(
-  geneNames = result.obj.list$upregulated_genes[,1],
-  geneList = result.obj.list$vectorized_all_DE,
-  universe = result.obj.list$all_genes[,1],
-  OrgDb = org.Ce.eg.db)
-  
-  full_vs_wt.lys.go.result$go_plot
-  
-  cat(paste0("### Downregulated"))
-  
-  full_vs_wt.lys.go.result <- geneOntologyAnalysis(
-    geneNames = result.obj.list$downregulated_genes[,1],
-    geneList = result.obj.list$vectorized_all_DE,
-    universe = result.obj.list$all_genes[,1],
-    OrgDb = org.Ce.eg.db)
-  
-  full_vs_wt.lys.go.result$go_plot
-}
+```{r full_vs_wt.lys, results='asis', warning=FALSE, message=FALSE}
+# # Full LOTR-1 KO vs WT Lysate fraction
+strainFractionGO(
+  result.obj = full_vs_wt.lys, 
+  strain = "Full LOTR-1 KO vs WT", 
+  fraction = "Lysate")
 ```
 
-
-# Full LOTR-1 KO vs WT
-
-### Upregulated
-```{r warning=FALSE, message=FALSE}
-
+```{r full_vs_wt.ply, results='asis', warning=FALSE, message=FALSE}
+# # Full LOTR-1 KO vs WT Polysome fraction
+strainFractionGO(
+  result.obj = full_vs_wt.ply, 
+  strain = "Full LOTR-1 KO vs WT", 
+  fraction = "Polysome")
 ```
 
-### Downregulated
-```{r}
-
+```{r tudor_vs_wt.lys, results='asis', warning=FALSE, message=FALSE}
+# # Tudor LOTR-1 KO vs WT Lysate fraction
+strainFractionGO(
+  result.obj = tudor_vs_wt.lys, 
+  strain = "Tudor LOTR-1 KO vs WT", 
+  fraction = "Lysate")
 ```
 
-## Polysome
-```{r}
-full_vs_wt.ply.list <- translateBioIDs(
-  DESeqResults.obj = full_vs_wt.ply,
-  bioID = "WORMBASE"
-  )
+```{r tudor_vs_wt.ply, results='asis', warning=FALSE, message=FALSE}
+# # Tudor LOTR-1 KO vs WT Polysome fraction
+strainFractionGO(
+  result.obj = tudor_vs_wt.ply, 
+  strain = "Tudor LOTR-1 KO vs WT", 
+  fraction = "Polysome")
 ```
 
-### Upregulated
-```{r}
-full_vs_wt.ply.go.result <- geneOntologyAnalysis(
-  geneNames = full_vs_wt.ply.list$upregulated_genes[,1],
-  geneList = full_vs_wt.ply.list$vectorized_all_DE,
-  universe = full_vs_wt.ply.list$all_genes[,1],
-  OrgDb = org.Ce.eg.db
-)
-full_vs_wt.ply.go.result$go_plot
+```{r lotus_vs_wt.lys, results='asis', warning=FALSE, message=FALSE}
+# # LOTUS LOTR-1 KO vs WT Lysate fraction
+strainFractionGO(
+  result.obj = lotus_vs_wt.lys, 
+  strain = "LOTUS LOTR-1 KO vs WT", 
+  fraction = "Lysate")
 ```
 
-### Downregulated
-```{r}
-full_vs_wt.ply.go.result <- geneOntologyAnalysis(
-  geneNames = full_vs_wt.ply.list$downregulated_genes[,1],
-  geneList = full_vs_wt.ply.list$vectorized_all_DE,
-  universe = full_vs_wt.ply.list$all_genes[,1],
-  OrgDb = org.Ce.eg.db
-)
-full_vs_wt.ply.go.result$go_plot
+```{r lotus_vs_wt.ply, results='asis', warning=FALSE, message=FALSE}
+# # LOTUS LOTR-1 KO vs WT Polysome fraction
+strainFractionGO(
+  result.obj = lotus_vs_wt.ply, 
+  strain = "LOTUS LOTR-1 KO vs WT", 
+  fraction = "Polysome")
 ```
 
-# Tudor Domain LOTR-1 KO vs WT
-
-```{r}
-makeTabsetSection <- function(plotList, title, ko){
-  # Experiment Header
-  cat(paste0("# ", title," ",ko, " \n{.tabset}\n-----------------------------------------------------------------------\n"))
-  
-  # Tab and Figure Vectors
-  tabs <- c("Lysate", "Polysome", "Lysate Argonaute Density", "Polysome Argonaute Density")
-  figs <- c("fig1", "fig2", "fig3", "fig4")
-  
-  for (i in seq_along(tabs)){
-    # Write Tab Header
-    cat(paste0("### ", tabs[[i]], "\n"))
-    # Print Fig Stored in PlotList
-    print(htmltools::tagList(plotList[[i]]))
-    cat("\n\n")
-  }
-}
+```{r cleanup, warning=FALSE, message=FALSE, echo=FALSE}
+rm(lys, ply, full_vs_wt.lys, full_vs_wt.ply, tudor_vs_wt.lys, tudor_vs_wt.ply, lotus_vs_wt.lys, lotus_vs_wt.ply, geneOntologyAnalysis, strainFractionGO, translateBioIDs)
 ```
-
 

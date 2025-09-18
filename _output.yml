@@ -1,4 +1,8 @@
-bookdown::gitbook:
+bookdown::html_document2:
+  toc: TRUE
+  toc_depth: 3
+  toc_float: TRUE
+  number_sections: FALSE
   css: style.css
   config:
     toc:

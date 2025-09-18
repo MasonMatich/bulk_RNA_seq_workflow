@@ -26,8 +26,9 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   # Record transfer success
   if (return.success == TRUE){
     t1 <- table(gene.df$WORMBASE %in% gene_ids$WORMBASE)
-    cat(paste0(t1[["FALSE"]]," gene IDs were not successfully transfered from WORMBASE to ENTREZID \n+ + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + +\n"))
-    cat(paste0(t1[["TRUE"]]," gene IDs were successfully transfered from WORMBASE to ENTREZID"))
+    cat(paste0(t1[["FALSE"]]," gene IDs were not transfered from WORMBASE to ENTREZID \n\n"))
+    cat(paste0(t1[["TRUE"]]," gene IDs were successfully transfered from WORMBASE to ENTREZID \n\n"))
+    cat("")
   }
   
   # Clear duplicate genes following ID transfer
