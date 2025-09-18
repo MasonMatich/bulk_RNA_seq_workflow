@@ -1,0 +1,57 @@
+---
+title: "go_gene_set_enrichment_analysis"
+author: "Mason Matich"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+---
+
+# 
+
+```{r setup, warning=FALSE, message=FALSE, results='hide'}
+## Library Preparation
+library(clusterProfiler)
+library(DESeq2)
+library(dplyr)
+library(tidyverse)
+library(presto)
+library(ashr)
+library(GOSemSim)
+library(org.Ce.eg.db)
+```
+
+```{r}
+# Call functions
+source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/translateBioIDs.R")
+source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/geneOntologyAnalysis.R")
+```
+
+## Read in Data
+```{r}
+# Lysate
+lys <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/intermediate_data/deseq2_dds_objects/lotr1_isolatedStrain_Lysate_BatchCor_dds.rds")
+
+# Polysome
+ply <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/intermediate_data/deseq2_dds_objects/lotr1_isolatedStrain_Polysome_BatchCor_dds.rds")
+```
+
+## Get DESeq2 Results
+```{r}
+full_vs_wt.lys <- results(lys, name = "strain_DUP185_vs_DUP167")
+```
+
+# Analysis of (Full LOTR-1 KO vs WT) (Lysate) (Upregulated)
+```{r warning=FALSE, message=FALSE}
+full_vs_wt.lys.list <- translateBioIDs(
+  DESeqResults.obj = full_vs_wt.lys,
+  bioID = "WORMBASE"
+  )
+
+full_vs_wt.lys.go.result <- geneOntologyAnalysis(
+  geneNames = full_vs_wt.lys.list$upregulated_genes[,1],
+  geneList = full_vs_wt.lys.list$vectorized_all_DE,
+  universe = full_vs_wt.lys.list$all_genes[,1],
+  OrgDb = org.Ce.eg.db
+)
+```
+
+
