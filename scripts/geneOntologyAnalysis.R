@@ -1,7 +1,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # #         Gene Ontology Enrichment Analysis         # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-geneOntologyAnalysis <- function(geneNames, geneList, universe, OrgDb){
+geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, universe, OrgDb){
   
   # # GO Classification # #
   go_classification <- groupGO(gene = geneNames,

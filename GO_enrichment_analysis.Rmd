@@ -3,10 +3,14 @@ title: "go_gene_set_enrichment_analysis"
 author: "Mason Matich"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
+output: 
+  html_document:
+    toc: TRUE
+    toc_depth: 2
+    toc_float: TRUE
 ---
 
-# 
-
+# Setup
 ```{r setup, warning=FALSE, message=FALSE, results='hide'}
 ## Library Preparation
 library(clusterProfiler)
@@ -20,14 +24,14 @@ library(org.Ce.eg.db)
 library(bookdown)
 ```
 
-```{r}
+```{r read_in_functions}
 # Call functions
 source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/translateBioIDs.R")
 source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/geneOntologyAnalysis.R")
 ```
 
 ## Read in Data
-```{r}
+```{r read_in_data}
 # Lysate
 lys <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/intermediate_data/deseq2_dds_objects/lotr1_isolatedStrain_Lysate_BatchCor_dds.rds")
 
@@ -36,23 +40,116 @@ ply <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analys
 ```
 
 ## Get DESeq2 Results
-```{r}
+```{r get_DESeq_results}
+# Full KO vs WT 
 full_vs_wt.lys <- results(lys, name = "strain_DUP185_vs_DUP167")
+full_vs_wt.ply <- results(ply, name = "strain_DUP185_vs_DUP167")
+
+# Tudor KO vs WT
+tudor_vs_wt.lys <- results(lys, name = "strain_DUP207_vs_DUP167")
+tudor_vs_wt.ply <- results(ply, name = "strain_DUP207_vs_DUP167")
+
+# LOTUS KO vs WT
+lotus_vs_wt.lys <- results(lys, name = "strain_DUP217_vs_DUP167")
+lotus_vs_wt.ply <- results(ply, name = "strain_DUP217_vs_DUP167")
 ```
 
-# Analysis of (Full LOTR-1 KO vs WT) (Lysate) (Upregulated)
+# strain/fraction/GO Analysis
+```{r}
+strain.fraction.go <- function(result.obj, strain, fraction){
+  
+  cat(paste0("#", strain))
+  cat(paste0("##", fraction, "{.tabset .tabset-pills}"))
+  
+  result.obj.list <- translateBioIDs(
+    DESeqResults.obj = result.obj,
+    bioID = "WORMBASE"
+    )
+  
+  cat(paste0("### Upregulated"))
+  
+  full_vs_wt.lys.go.result <- geneOntologyAnalysis(
+  geneNames = result.obj.list$upregulated_genes[,1],
+  geneList = result.obj.list$vectorized_all_DE,
+  universe = result.obj.list$all_genes[,1],
+  OrgDb = org.Ce.eg.db)
+  
+  full_vs_wt.lys.go.result$go_plot
+  
+  cat(paste0("### Downregulated"))
+  
+  full_vs_wt.lys.go.result <- geneOntologyAnalysis(
+    geneNames = result.obj.list$downregulated_genes[,1],
+    geneList = result.obj.list$vectorized_all_DE,
+    universe = result.obj.list$all_genes[,1],
+    OrgDb = org.Ce.eg.db)
+  
+  full_vs_wt.lys.go.result$go_plot
+}
+```
+
+
+# Full LOTR-1 KO vs WT
+
+### Upregulated
 ```{r warning=FALSE, message=FALSE}
-full_vs_wt.lys.list <- translateBioIDs(
-  DESeqResults.obj = full_vs_wt.lys,
+
+```
+
+### Downregulated
+```{r}
+
+```
+
+## Polysome
+```{r}
+full_vs_wt.ply.list <- translateBioIDs(
+  DESeqResults.obj = full_vs_wt.ply,
   bioID = "WORMBASE"
   )
+```
 
-full_vs_wt.lys.go.result <- geneOntologyAnalysis(
-  geneNames = full_vs_wt.lys.list$upregulated_genes[,1],
-  geneList = full_vs_wt.lys.list$vectorized_all_DE,
-  universe = full_vs_wt.lys.list$all_genes[,1],
+### Upregulated
+```{r}
+full_vs_wt.ply.go.result <- geneOntologyAnalysis(
+  geneNames = full_vs_wt.ply.list$upregulated_genes[,1],
+  geneList = full_vs_wt.ply.list$vectorized_all_DE,
+  universe = full_vs_wt.ply.list$all_genes[,1],
   OrgDb = org.Ce.eg.db
 )
+full_vs_wt.ply.go.result$go_plot
+```
+
+### Downregulated
+```{r}
+full_vs_wt.ply.go.result <- geneOntologyAnalysis(
+  geneNames = full_vs_wt.ply.list$downregulated_genes[,1],
+  geneList = full_vs_wt.ply.list$vectorized_all_DE,
+  universe = full_vs_wt.ply.list$all_genes[,1],
+  OrgDb = org.Ce.eg.db
+)
+full_vs_wt.ply.go.result$go_plot
+```
+
+# Tudor Domain LOTR-1 KO vs WT
+
+```{r}
+makeTabsetSection <- function(plotList, title, ko){
+  # Experiment Header
+  cat(paste0("# ", title," ",ko, " \n{.tabset}\n-----------------------------------------------------------------------\n"))
+  
+  # Tab and Figure Vectors
+  tabs <- c("Lysate", "Polysome", "Lysate Argonaute Density", "Polysome Argonaute Density")
+  figs <- c("fig1", "fig2", "fig3", "fig4")
+  
+  for (i in seq_along(tabs)){
+    # Write Tab Header
+    cat(paste0("### ", tabs[[i]], "\n"))
+    # Print Fig Stored in PlotList
+    print(htmltools::tagList(plotList[[i]]))
+    cat("\n\n")
+  }
+}
 ```
 
 
