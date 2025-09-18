@@ -6,3 +6,4 @@ view: https://github.com/YOUR GITHUB USERNAME/YOUR REPO NAME/blob/main/%s
 language:
   ui:
     chapter_name: "Chapter "
+rmd_files: ["GO_enrichment_analysis.Rmd"]
