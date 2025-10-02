@@ -3,18 +3,17 @@
 # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # From WormBase to ENTREZID
 
-translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
+translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE, l2fc_filter, padj_filter) {
   
   if (bioID != "WORMBASE"){
-    print("⛔️ ERROR: Only WORMBASE biological ID supported as input.")
-    return(0)
+    stop("⛔️ ERROR: Only WORMBASE biological ID supported as input.")
   }
   
   # Convert DESeq2 results object to DataFrame, and edit structure
   gene.df <- DESeqResults.obj %>%
     data.frame() %>%
     rownames_to_column("WORMBASE") %>%
-    dplyr::select(WORMBASE, log2FoldChange)
+    dplyr::select(WORMBASE, log2FoldChange, pvalue, padj)
   
   # Biological ID TranslatoR
   gene_ids <- bitr(gene.df[,'WORMBASE'],
@@ -26,9 +25,11 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   # Record transfer success
   if (return.success == TRUE){
     t1 <- table(gene.df$WORMBASE %in% gene_ids$WORMBASE)
-    cat(paste0(t1[["FALSE"]]," gene IDs were not transfered from WORMBASE to ENTREZID \n\n"))
+    cat("**Transfering WORMBASE gene IDs to ENTREZID:**\n\n")
+    cat("```r\n")
+    cat(paste0(t1[["FALSE"]]," gene IDs were not transfered from WORMBASE to ENTREZID \n"))
     cat(paste0(t1[["TRUE"]]," gene IDs were successfully transfered from WORMBASE to ENTREZID \n\n"))
-    cat("")
+    cat("```\n\n")
   }
   
   # Clear duplicate genes following ID transfer
@@ -39,7 +40,7 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   # Add ENTREZID to L2FC carrying DataFrame
   gene.df <- gene.df %>%
     mutate(ENTREZID = gene_ids[WORMBASE, 1]) %>%
-    dplyr::select(ENTREZID, log2FoldChange) %>%
+    dplyr::select(ENTREZID, log2FoldChange, pvalue, padj) %>%
     subset(!is.na(ENTREZID)) # Remove NA ENTREZ ID values
   rownames(gene.df) <- NULL
   
@@ -47,27 +48,46 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   
   # Subset for highly varirable genes
   variable.genes <- gene.df %>%
-    subset(abs(log2FoldChange) > 1.5)
+    subset(abs(log2FoldChange) > l2fc_filter & padj < padj_filter & !isNA(padj))
   rownames(variable.genes) <- NULL
+  
+    # report number of highly variable genes used for analysis
+  cat(sprintf("**Number of highly variable genes identified (with | L2FC | > %s and padj < %s) is:**\n\n", toString(l2fc_filter) , toString(padj_filter)))
+  cat("```r\n")
+  cat(length(variable.genes[[1]]))
+  cat("\n\n```\n\n")
   
   # Subset for highly upregulated genes
   upregulated.genes <- gene.df %>%
-    subset(log2FoldChange > 1.5)
+    subset(log2FoldChange > l2fc_filter & padj < padj_filter & !isNA(padj))
   rownames(upregulated.genes) <- NULL
+  
+    # report number of highly variable genes used for analysis
+  cat(sprintf("**Number of highly upregulated genes identified (with L2FC > %s and padj < %s) is:**\n\n", toString(l2fc_filter) , toString(padj_filter)))
+  cat("```r\n")
+  cat(length(upregulated.genes[[1]]))
+  cat("\n\n```\n\n")
   
   # Subset for highly downregulated genes
   downregulated.genes <- gene.df %>%
-    subset(log2FoldChange < -1.5)
+    subset(log2FoldChange < -l2fc_filter & padj < padj_filter & !isNA(padj))
   rownames(downregulated.genes) <- NULL
   
+    # report number of highly variable genes used for analysis
+  cat(sprintf("**Number of highly downregulated genes identified (with L2FC < -%s and padj < %s) is:**\n\n", toString(l2fc_filter) , toString(padj_filter)))
+  cat("```r\n")
+  cat(length(downregulated.genes[[1]]))
+  cat("\n\n```\n\n")
+  
   # Subset for all genes (universe DataFrame)
-  all.genes <- gene.df
+  all.genes <- gene.df %>%
+    subset(!isNA(padj)) %>%
+    arrange(desc(log2FoldChange))
   
   # Vectorized differentially expressed genes
   vectorized <- all.genes[,2]
   names(vectorized) <- all.genes[,1]
-  vectorized <- sort(vectorized, decreasing = TRUE)
-  
+
   # Save all data to list
   gene.list <- list(variable.genes, upregulated.genes, downregulated.genes, all.genes, vectorized)
   names(gene.list) <- c("variable_genes", "upregulated_genes", "downregulated_genes", "all_genes", "vectorized_all_DE")

@@ -11,6 +11,10 @@ output:
 ---
 
 # Setup
+
+Many of the figures and analysis methodology were based off of this tutorial from NYU.
+https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
+
 ```{r setup, warning=FALSE, message=FALSE, results='hide'}
 ## Library Preparation
 library(clusterProfiler)
@@ -23,13 +27,16 @@ library(GOSemSim)
 library(org.Ce.eg.db)
 library(bookdown)
 library(knitr)
+library(DT)
+library(htmltools)
 ```
 
 ```{r}
 # Call functions
 source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/translateBioIDs.R")
-source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/geneOntologyAnalysis.R")
+source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/runGO.R")
 source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/strainFractionGO.R")
+source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scripts/emptyTableMessage.R")
 ```
 
 ## Function called for Analysis {.tabset .tabset-pills}
@@ -40,14 +47,14 @@ source("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/scrip
 # #         Calls translateBioIDs.R and geneOntologyAnalysis.R        # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-strainFractionGO <- function(result.obj, strain, fraction){
+strainFractionGO <- function(result.obj, strain, fraction, l2fc_filter, padj_filter){
   
   # Create comment structure for bookdown render
-  cat(paste0("# ", strain," ", fraction, " {.tabset .tabset-pills}\n\n"))
-  
+  cat(paste0("# ", strain," ", fraction, " {.tabset .tabset}\n\n"))
+
   # Show exact call which invoked function
   call_txt <- paste(deparse(match.call()), collapse = "\n")
-  cat("Inputs for function call:\n\n")
+  cat("**Inputs for function call:**\n\n")
   cat("```r\n")
   cat(call_txt, "\n\n")
   cat("```\n\n")
@@ -55,50 +62,117 @@ strainFractionGO <- function(result.obj, strain, fraction){
   # Translate Wormbase IDs to ENTREZID
   result.obj.list <- translateBioIDs(
     DESeqResults.obj = result.obj,
-    bioID = "WORMBASE"
-    )
+    bioID = "WORMBASE",
+    l2fc_filter = l2fc_filter,
+    padj_filter = padj_filter
+  )
   
   # Run gruopGO(), enrichGO(), gseGO(), and goplot()
-  go.result.list <- geneOntologyAnalysis(
+  go.result.list <- runGO(
     geneNames.up = result.obj.list$upregulated_genes[,1],
     geneNames.down = result.obj.list$downregulated_genes[,1],
     geneList = result.obj.list$vectorized_all_DE,
     universe = result.obj.list$all_genes[,1],
     OrgDb = org.Ce.eg.db)
   
-  # Print out Gene set enrichment analysis plot
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  # #     Print text and tables to console for bookdown rendering     # #
+  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  
+  
+  # # #                             GSEA                            # # # 
   cat(paste0("## GSEA \n\n"))
-  print(go.result.list$go_plot[[1]])
+  # Print GSEA table
+  t0 <- list(datatable(data.frame(go.result.list$go_gse[[1]]),
+                       extensions = 'Buttons',
+                       caption = " GSE Of All DEGs.",
+                       options = list(
+                         dom = "Bfrtip",
+                         buttons = c('csvHtml5'),
+                         pageLength = 5)))
+  
+  print(htmltools::tagList(t0[[1]]))
+  cat("\n\n")
+  
+  # Tabset for GSEA plots
+  cat(sprintf("#### %s %s GSEA Plots {.tabset .tabset-pills}\n\n", strain, fraction))
+  
+  
+  # Print GSEA plot for each set identified 
+  for (i in 1:nrow(data.frame(go.result.list$go_gse[[1]]))) {
+    cat(sprintf("##### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
+    print(gseaplot(go.result.list$go_gse[[1]], by = "all", title = go.result.list$go_gse[[1]]$Description[i], geneSetID = go.result.list$go_gse[[1]]$ID[i]))
+    cat("\n\n")
+  }
 
-  # Print out GO classification and GO over-representation of unregulated genes
+  
+  # # #    Upregulated GO classification and GO over-representation   # # #
   cat(paste0("\n\n## Upregulated\n\n"))
   
-  print(knitr::kable(
-    head(go.result.list$go_class_upreg[[1]], 10),
-    booktabs = TRUE,
-    caption = ' GO Classification of Upregulated Genes.'))
+  if(nrow(data.frame(go.result.list$go_class_upreg[[1]])) != 0){
+    t1 <- list(datatable(data.frame(go.result.list$go_class_upreg[[1]]),
+                    extensions = 'Buttons',
+                    caption = " GO Classification of Upregulated Genes.",
+                    options = list(
+                      dom = "Bfrtip",
+                      buttons = c('csvHtml5'),
+                      pageLength = 5)))
+    print(htmltools::tagList(t1[[1]]))
+    cat("\n\n")
+    write.csv(go.result.list$go_class_upreg[[1]], file = sprintf("./results/%s_%s_GO.classification.upreg.csv",gsub(" ", "_", tolower(strain)),tolower(fraction)))
+  }else{
+    emptyTableMessage(' GO Classification of Upregulated Genes')
+  }
   
-  cat("\n\n")
+  if(nrow(data.frame(go.result.list$go_overrep_upreg[[1]])) != 0){
+    t2 <- list(datatable(data.frame(go.result.list$go_overrep_upreg[[1]]),
+                    extensions = "Buttons",
+                    caption = " GO Over-representation Analysis of Upregulated Genes.",
+                    options = list(
+                      dom = "Bfrtip",
+                      buttons = c('csvHtml5'),
+                      pageLength = 5)))
+    print(htmltools::tagList(t2[[1]]))
+    cat("\n\n")
+    write.csv(go.result.list$go_overrep_upreg[[1]], file = sprintf("./results/%s_%s_GO.overrepresented.upreg.csv",gsub(" ", "_", tolower(strain)),tolower(fraction)))
+  }else{
+    emptyTableMessage(' GO Over-representation Analysis of Upregulated Genes')
+  }
   
-  print(knitr::kable(
-    head(go.result.list$go_overrep_upreg[[1]], 10),
-    booktabs = TRUE,
-    caption = ' GO Over-representation Analysis of Upregulated Genes.'))
   
-  # Print out GO classification and GO over-representation of downregulated genes
+  # # #    Downregulated GO classification and GO over-representation   # # #
   cat(paste0("\n\n## Downregulated\n\n"))
-    
-  print(knitr::kable(
-    head(go.result.list$go_class_downreg[[1]], 10),
-    booktabs = TRUE,
-    caption = ' GO Classification of Downregulated Genes.'))
   
-  cat("\n\n")
-  
-  print(knitr::kable(
-    head(go.result.list$go_overrep_downreg[[1]], 10),
-    booktabs = TRUE,
-    caption = ' GO Over-representation Analysis of Downregulated Genes.'))
+  if(nrow(data.frame(go.result.list$go_class_downreg[[1]])) != 0){
+    t3 <- list(datatable(data.frame(go.result.list$go_class_downreg[[1]]),
+                    extensions = "Buttons",
+                    caption = " GO Classification of Downregulated Genes.",
+                    options = list(
+                      dom = "Bfrtip",
+                      buttons = c('csvHtml5'),
+                      pageLength = 5)))
+    print(htmltools::tagList(t3[[1]]))
+    cat("\n\n")
+    write.csv(go.result.list$go_class_downreg[[1]], file = sprintf("./results/%s_%s_GO.classification.downreg.csv",gsub(" ", "_", tolower(strain)),tolower(fraction)))
+  }else{
+    emptyTableMessage(' GO Classification of Downregulated Genes')
+  }
+
+  if(nrow(data.frame(go.result.list$go_overrep_downreg[[1]])) != 0){
+    t4 <- list(datatable(data.frame(go.result.list$go_overrep_downreg[[1]]),
+                    extensions = "Buttons",
+                    caption = " GO Over-representation Analysis of Downregulated Genes.",
+                    options = list(
+                      dom = "Bfrtip",
+                      buttons = c('csvHtml5'),
+                      pageLength = 5)))
+    print(htmltools::tagList(t4[[1]]))
+    cat("\n\n")
+    write.csv(go.result.list$go_overrep_downreg[[1]], file = sprintf("./results/%s_%s_GO.overrepresented.downreg.csv",gsub(" ", "_", tolower(strain)),tolower(fraction)))
+  }else{
+    emptyTableMessage(' GO Over-representation Analysis of Downregulated Genes')
+  }
+  rm(t0, t1, t2, t3, t4)
 }
 ```
 
@@ -107,20 +181,19 @@ strainFractionGO <- function(result.obj, strain, fraction){
 # # # # # # # # # # # # # # # # # # # # # # # # #
 # #         Translating Biological IDS        # #
 # # # # # # # # # # # # # # # # # # # # # # # # #
-
 # # # From WormBase to ENTREZID
-translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
+
+translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE, l2fc_filter, padj_filter) {
   
   if (bioID != "WORMBASE"){
-    print("⛔️ ERROR: Only WORMBASE biological ID supported as input.")
-    return(0)
+    stop("⛔️ ERROR: Only WORMBASE biological ID supported as input.")
   }
   
   # Convert DESeq2 results object to DataFrame, and edit structure
   gene.df <- DESeqResults.obj %>%
     data.frame() %>%
     rownames_to_column("WORMBASE") %>%
-    dplyr::select(WORMBASE, log2FoldChange)
+    dplyr::select(WORMBASE, log2FoldChange, pvalue, padj)
   
   # Biological ID TranslatoR
   gene_ids <- bitr(gene.df[,'WORMBASE'],
@@ -132,9 +205,11 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   # Record transfer success
   if (return.success == TRUE){
     t1 <- table(gene.df$WORMBASE %in% gene_ids$WORMBASE)
-    cat(paste0(t1[["FALSE"]]," gene IDs were not successfully transfered from WORMBASE to ENTREZID \n\n"))
+    cat("**Transfering WORMBASE gene IDs to ENTREZID:**\n\n")
+    cat("```r\n")
+    cat(paste0(t1[["FALSE"]]," gene IDs were not transfered from WORMBASE to ENTREZID \n"))
     cat(paste0(t1[["TRUE"]]," gene IDs were successfully transfered from WORMBASE to ENTREZID \n\n"))
-    cat("")
+    cat("```\n\n")
   }
   
   # Clear duplicate genes following ID transfer
@@ -145,7 +220,7 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   # Add ENTREZID to L2FC carrying DataFrame
   gene.df <- gene.df %>%
     mutate(ENTREZID = gene_ids[WORMBASE, 1]) %>%
-    dplyr::select(ENTREZID, log2FoldChange) %>%
+    dplyr::select(ENTREZID, log2FoldChange, pvalue, padj) %>%
     subset(!is.na(ENTREZID)) # Remove NA ENTREZ ID values
   rownames(gene.df) <- NULL
   
@@ -153,27 +228,46 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   
   # Subset for highly varirable genes
   variable.genes <- gene.df %>%
-    subset(abs(log2FoldChange) > 1.5)
+    subset(abs(log2FoldChange) > l2fc_filter & padj < padj_filter & !isNA(padj))
   rownames(variable.genes) <- NULL
+  
+    # report number of highly variable genes used for analysis
+  cat(sprintf("**Number of highly variable genes identified (with | L2FC | > %s and padj < %s) is:**\n\n", toString(l2fc_filter) , toString(padj_filter)))
+  cat("```r\n")
+  cat(length(variable.genes[[1]]))
+  cat("\n\n```\n\n")
   
   # Subset for highly upregulated genes
   upregulated.genes <- gene.df %>%
-    subset(log2FoldChange > 1.5)
+    subset(log2FoldChange > l2fc_filter & padj < padj_filter & !isNA(padj))
   rownames(upregulated.genes) <- NULL
+  
+    # report number of highly variable genes used for analysis
+  cat(sprintf("**Number of highly upregulated genes identified (with L2FC > %s and padj < %s) is:**\n\n", toString(l2fc_filter) , toString(padj_filter)))
+  cat("```r\n")
+  cat(length(upregulated.genes[[1]]))
+  cat("\n\n```\n\n")
   
   # Subset for highly downregulated genes
   downregulated.genes <- gene.df %>%
-    subset(log2FoldChange < -1.5)
+    subset(log2FoldChange < -l2fc_filter & padj < padj_filter & !isNA(padj))
   rownames(downregulated.genes) <- NULL
   
+    # report number of highly variable genes used for analysis
+  cat(sprintf("**Number of highly downregulated genes identified (with L2FC < -%s and padj < %s) is:**\n\n", toString(l2fc_filter) , toString(padj_filter)))
+  cat("```r\n")
+  cat(length(downregulated.genes[[1]]))
+  cat("\n\n```\n\n")
+  
   # Subset for all genes (universe DataFrame)
-  all.genes <- gene.df
+  all.genes <- gene.df %>%
+    subset(!isNA(padj)) %>%
+    arrange(desc(log2FoldChange))
   
   # Vectorized differentially expressed genes
   vectorized <- all.genes[,2]
   names(vectorized) <- all.genes[,1]
-  vectorized <- sort(vectorized, decreasing = TRUE)
-  
+
   # Save all data to list
   gene.list <- list(variable.genes, upregulated.genes, downregulated.genes, all.genes, vectorized)
   names(gene.list) <- c("variable_genes", "upregulated_genes", "downregulated_genes", "all_genes", "vectorized_all_DE")
@@ -181,13 +275,14 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE) {
   return(gene.list)
 }
 ```
-### geneOntologyAnalysis.R
+
+### runGO.R
 ```r
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # #         Gene Ontology Enrichment Analysis         # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, universe, OrgDb){
+runGO <- function(geneNames.up, geneNames.down, geneList, universe, OrgDb){
   
   
   # # # # # # # # # # # # # # # # # # # # # # #
@@ -199,7 +294,8 @@ geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, univers
           OrgDb = OrgDb,
           ont = "CC",
           level = 3,
-          readable = TRUE)
+          readable = TRUE) %>%
+    arrange(desc(Count))
   
   # # GO Over-Representation Analysis # #
   go_overrep_upreg <- enrichGO(gene = geneNames.up,
@@ -209,7 +305,8 @@ geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, univers
            pAdjustMethod = "BH",
            pvalueCutoff = 0.01,
            qvalueCutoff = 0.05,
-           readable = TRUE)
+           readable = TRUE) %>%
+    arrange(desc(Count))
   
   
   # # # # # # # # # # # # # # # # # # # # # # # #
@@ -221,7 +318,8 @@ geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, univers
                                OrgDb = OrgDb,
                                ont = "CC",
                                level = 3,
-                               readable = TRUE)
+                               readable = TRUE) %>%
+    arrange(desc(Count))
   
   # # GO Over-Representation Analysis # #
   go_overrep_downreg <- enrichGO(gene = geneNames.down,
@@ -231,7 +329,10 @@ geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, univers
                                     pAdjustMethod = "BH",
                                     pvalueCutoff = 0.01,
                                     qvalueCutoff = 0.05,
-                                    readable = TRUE)
+                                    readable = TRUE) %>%
+    arrange(desc(Count))
+  
+  
   
   # # # # # # # # # # # # # # # # # # # # # # # #
   # #     GO Gene Set Enrichment Analysis     # #
@@ -244,15 +345,12 @@ geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, univers
         pvalueCutoff = 0.05,
         verbose = FALSE)
   
-  go_plot <- goplot(go_gene_set_enrichment)
-  
   go_results <- list(
     list(go_class_upreg),
     list(go_overrep_upreg), 
     list(go_class_downreg),
     list(go_overrep_downreg), 
-    list(go_gene_set_enrichment), 
-    list(go_plot)
+    list(go_gene_set_enrichment)
     )
   
   names(go_results) <- c(
@@ -260,8 +358,7 @@ geneOntologyAnalysis <- function(geneNames.up, geneNames.down, geneList, univers
     "go_overrep_upreg", 
     "go_class_downreg", 
     "go_overrep_downreg", 
-    "go_gse", 
-    "go_plot"
+    "go_gse"
     )
   
   return(go_results)
@@ -298,55 +395,72 @@ lotus_vs_wt.lys <- results(lys, name = "strain_DUP217_vs_DUP167")
 lotus_vs_wt.ply <- results(ply, name = "strain_DUP217_vs_DUP167")
 ```
 
-```{r full_vs_wt.lys, results='asis', warning=FALSE, message=FALSE}
+```{r datatable_dependencies, include=FALSE}
+# Doesn't render in bookdown, but loades dependences needed to render other datatables
+datatable(data.frame(x = c(1), y = c(1)))
+```
+
+```{r full_vs_wt.lys, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 # # Full LOTR-1 KO vs WT Lysate fraction
 strainFractionGO(
   result.obj = full_vs_wt.lys, 
   strain = "Full LOTR-1 KO vs WT", 
-  fraction = "Lysate")
+  fraction = "Lysate",
+  l2fc_filter = 0.8,
+  padj_filter = 0.05)
 ```
 
-```{r full_vs_wt.ply, results='asis', warning=FALSE, message=FALSE}
+```{r full_vs_wt.ply, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 # # Full LOTR-1 KO vs WT Polysome fraction
 strainFractionGO(
   result.obj = full_vs_wt.ply, 
   strain = "Full LOTR-1 KO vs WT", 
-  fraction = "Polysome")
+  fraction = "Polysome",
+  l2fc_filter = 0.8,
+  padj_filter = 0.05)
 ```
 
-```{r tudor_vs_wt.lys, results='asis', warning=FALSE, message=FALSE}
+```{r tudor_vs_wt.lys, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 # # Tudor LOTR-1 KO vs WT Lysate fraction
 strainFractionGO(
   result.obj = tudor_vs_wt.lys, 
   strain = "Tudor LOTR-1 KO vs WT", 
-  fraction = "Lysate")
+  fraction = "Lysate", 
+  l2fc_filter = 0.8,
+  padj_filter = 0.05)
 ```
 
-```{r tudor_vs_wt.ply, results='asis', warning=FALSE, message=FALSE}
+```{r tudor_vs_wt.ply, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 # # Tudor LOTR-1 KO vs WT Polysome fraction
 strainFractionGO(
   result.obj = tudor_vs_wt.ply, 
   strain = "Tudor LOTR-1 KO vs WT", 
-  fraction = "Polysome")
+  fraction = "Polysome",
+  l2fc_filter = 0.8,
+  padj_filter = 0.05)
 ```
 
-```{r lotus_vs_wt.lys, results='asis', warning=FALSE, message=FALSE}
+```{r lotus_vs_wt.lys, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 # # LOTUS LOTR-1 KO vs WT Lysate fraction
 strainFractionGO(
   result.obj = lotus_vs_wt.lys, 
   strain = "LOTUS LOTR-1 KO vs WT", 
-  fraction = "Lysate")
+  fraction = "Lysate",
+  l2fc_filter = 0.8,
+  padj_filter = 0.05)
 ```
 
-```{r lotus_vs_wt.ply, results='asis', warning=FALSE, message=FALSE}
+```{r lotus_vs_wt.ply, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 # # LOTUS LOTR-1 KO vs WT Polysome fraction
 strainFractionGO(
   result.obj = lotus_vs_wt.ply, 
   strain = "LOTUS LOTR-1 KO vs WT", 
-  fraction = "Polysome")
+  fraction = "Polysome",
+  l2fc_filter = 0.8,
+  padj_filter = 0.05)
 ```
 
 ```{r cleanup, warning=FALSE, message=FALSE, echo=FALSE}
-rm(lys, ply, full_vs_wt.lys, full_vs_wt.ply, tudor_vs_wt.lys, tudor_vs_wt.ply, lotus_vs_wt.lys, lotus_vs_wt.ply, geneOntologyAnalysis, strainFractionGO, translateBioIDs)
+rm(lys, ply, full_vs_wt.lys, full_vs_wt.ply, tudor_vs_wt.lys, tudor_vs_wt.ply, lotus_vs_wt.lys, lotus_vs_wt.ply, runGO, strainFractionGO, translateBioIDs, emptyTableMessage)
 ```
 
