@@ -7,6 +7,6 @@ bookdown::html_document2:
   config:
     toc:
       before: |
-        <li><a href="./">LOTR-1 GO Analysis</a></li>
+        <li><a href="./">bulk RNA-seq Analysis</a></li>
       after: |
         <li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
