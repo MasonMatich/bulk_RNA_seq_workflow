@@ -1,10 +1,12 @@
-bookdown::gitbook:
+bookdown::html_document2:
+  toc: TRUE
   toc_depth: 3
+  toc_float: TRUE
   number_sections: FALSE
   css: style.css
   config:
     toc:
       before: |
-        <li><a href="./">bulk RNA-seq Analysis</a></li>
+        <li><a href="./">Bulk RNA-seq Analysis</a></li>
       after: |
         <li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>

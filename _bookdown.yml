@@ -1,4 +1,4 @@
-book_filename: "LOTR-1 GO Analysis"
+book_filename: "Bulk RNA-seq Analysis"
 output_dir: docs
 delete_merged_file: true
 edit: https://github.com/MasonMatich/bulk_RNA_seq_workflow/edit/main/%s

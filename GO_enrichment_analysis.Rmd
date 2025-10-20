@@ -1,10 +1,12 @@
 ---
-title: "GO gene set enrichment analysis"
+title: "Bulk RNA-seq Analysis"
 author: "Mason Matich"
 date: "`r Sys.Date()`"
 output: 
-  gitbook:
+  html_document2:
+    toc: TRUE
     toc_depth: 3
+    toc_float: TRUE
     number_sections: FALSE
 ---
 
@@ -78,12 +80,6 @@ lys <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analys
 # Polysome
 ply <- readRDS("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/intermediate_data/deseq2_dds_objects/lotr1_isolatedStrain_Polysome_BatchCor_dds.rds")
 ```
-
-## LOTR-1 Mutants
-```{r print_mutants, warning=FALSE, message=FALSE, echo=FALSE}
-knitr::include_graphics("~/Documents/research_labs/mdibl_fall_2025/updike_lotr1_go_analysis/figures/lotr-1_mutants.png")
-```
-
 
 ## Get DESeq2 Results
 ```{r get_DESeq_results, warning=FALSE, message=FALSE}
