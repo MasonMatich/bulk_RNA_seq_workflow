@@ -3,10 +3,8 @@ title: "GO gene set enrichment analysis"
 author: "Mason Matich"
 date: "`r Sys.Date()`"
 output: 
-  html_document2:
-    toc: TRUE
+  gitbook:
     toc_depth: 3
-    toc_float: TRUE
     number_sections: FALSE
 ---
 
@@ -117,55 +115,6 @@ compileOntologyReport(
   padj_filter = 0.1)
 ```
 
-```{r full_vs_wt.ply, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
-# # Full LOTR-1 KO vs WT Polysome fraction
-compileOntologyReport(
-  result.obj = full_vs_wt.ply, 
-  strain = "Full LOTR-1 KO vs WT", 
-  fraction = "Polysome",
-  l2fc_filter = 0.8,
-  padj_filter = 0.1)
-```
-
-```{r tudor_vs_wt.lys, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
-# # Tudor LOTR-1 KO vs WT Lysate fraction
-compileOntologyReport(
-  result.obj = tudor_vs_wt.lys, 
-  strain = "Tudor LOTR-1 KO vs WT", 
-  fraction = "Lysate", 
-  l2fc_filter = 0.8,
-  padj_filter = 0.1)
-```
-
-```{r tudor_vs_wt.ply, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
-# # Tudor LOTR-1 KO vs WT Polysome fraction
-compileOntologyReport(
-  result.obj = tudor_vs_wt.ply, 
-  strain = "Tudor LOTR-1 KO vs WT", 
-  fraction = "Polysome",
-  l2fc_filter = 0.8,
-  padj_filter = 0.1)
-```
-
-```{r lotus_vs_wt.lys, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
-# # LOTUS LOTR-1 KO vs WT Lysate fraction
-compileOntologyReport(
-  result.obj = lotus_vs_wt.lys, 
-  strain = "LOTUS LOTR-1 KO vs WT", 
-  fraction = "Lysate",
-  l2fc_filter = 0.8,
-  padj_filter = 0.1)
-```
-
-```{r lotus_vs_wt.ply, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
-# # LOTUS LOTR-1 KO vs WT Polysome fraction
-compileOntologyReport(
-  result.obj = lotus_vs_wt.ply, 
-  strain = "LOTUS LOTR-1 KO vs WT", 
-  fraction = "Polysome",
-  l2fc_filter = 0.8,
-  padj_filter = 0.1)
-```
 
 ```{r cleanup, warning=FALSE, message=FALSE, echo=FALSE}
 rm(lys, ply, full_vs_wt.lys, full_vs_wt.ply, tudor_vs_wt.lys, tudor_vs_wt.ply, lotus_vs_wt.lys, lotus_vs_wt.ply, callClusterProfilerFunc, compileOntologyReport, translateBioIDs, emptyTableMessage, processFile)
