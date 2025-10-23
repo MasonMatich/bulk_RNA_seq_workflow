@@ -1,0 +1,2 @@
+salmon_merged_gene_counts_file_path, ref_level_cond, ref_level_value, design, batch_correct, batch_cond
+~/Documents/research_labs/projects/bulk_RNA_seq_workflow/raw_data/chen_phillips/salmon.merged.gene_counts.tsv, strain, wt, ~ replicate + strain, TRUE, replicate

@@ -1,0 +1,6 @@
+bookdown::render_book("index.rmd", params=list(
+       dynamic_title = "Chen & Phillips HRDE-1/HRDE-2 Reanalysis",
+       project = "chen_phillips_hrde1_hrde2",
+       params_file = "scripts/chen_phillips_sampleInfo.csv",
+       metadata = "scripts/metadata.txt"
+))

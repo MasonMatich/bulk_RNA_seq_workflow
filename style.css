@@ -24,7 +24,7 @@ table.dataTable {
 }
 
 .title *:not(h1) {
-  padding: 0 0 0 3px;
+  padding: 3px;
 }
 
 .title h1{
@@ -38,6 +38,52 @@ table.dataTable {
   border-radius: 0 10px 10px 0;
 }
 
+.subtitle h2{
+  color: #337AB7;
+  text-align: center;
+  border-style: solid;
+  border-width: 0 5px;
+  border-color: #337AB7;
+}
+
 pre {
   padding: 8px !important;
+  margin-left: 8px;
+}
+
+.nav-tabs {
+  padding: 0 3px !important;
+}
+
+.nav-tabs>li{
+  margin-bottom: -4px;
+}
+
+.tab-content {
+  padding: 0 3px !important;
+}
+
+.tab-pane {
+  padding: 0 0 0 3px;
+}
+
+.tab-content>.active {
+  background-color: #f7f7f7;
+  padding: 0 0 3px 3px;
+  border-width: 0 1px 1px 1px;
+  border-style: solid;
+  border-color: #ddd;
+}
+
+.nav-tabs>li.active>a, .nav-tabs>li.active>a:focus, .nav-tabs>li.active>a:hover {
+    background-color: #f7f7f7;
+}
+
+.tab-content>.active .level5{
+  padding: 0 0 3px 3px;
+  border: none;
+}
+
+p:has(img){
+  text-align: center;
 }

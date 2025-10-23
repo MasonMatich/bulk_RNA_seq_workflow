@@ -6,4 +6,4 @@ view: https://github.com/MasonMatich/bulk_RNA_seq_workflow/blob/main/%s
 language:
   ui:
     chapter_name: "Chapter "
-rmd_files: ["GO_enrichment_analysis.Rmd"]
+rmd_files: ["index.Rmd"]
