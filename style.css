@@ -24,7 +24,7 @@ table.dataTable {
 }
 
 .title *:not(h1) {
-  padding: 3px;
+  padding: 0 3px;
 }
 
 .title h1{
@@ -36,6 +36,7 @@ table.dataTable {
   border-color: #337AB7;
   padding: 5px 0 7px 0;
   border-radius: 0 10px 10px 0;
+  margin: 0;
 }
 
 .subtitle h2{

@@ -1,4 +1,4 @@
-book_filename: "Bulk RNA-seq Analysis"
+book_filename: "bulk_RNA_seq_workflow"
 output_dir: docs
 delete_merged_file: true
 edit: https://github.com/MasonMatich/bulk_RNA_seq_workflow/edit/main/%s
@@ -6,4 +6,4 @@ view: https://github.com/MasonMatich/bulk_RNA_seq_workflow/blob/main/%s
 language:
   ui:
     chapter_name: "Chapter "
-rmd_files: ["index.Rmd"]
+rmd_files: "index.Rmd"

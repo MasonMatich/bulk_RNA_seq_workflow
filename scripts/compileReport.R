@@ -36,7 +36,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
     x = 'log2FoldChange',
     y = 'pvalue'
   )
-  htmltools::tagList(list(volcano))
+  print(volcano)
   cat("\n\n")
   
   # # MA Plot
