@@ -131,8 +131,11 @@ if(all(colnames(count.matrix) != rownames(colData))){
 }
 ```
 Using the count matrix, column metadata, and user-inputed design formula (expressing the variables to be used in modeling), a DESeq data set is created. 
+
 The experimental variable and the associated control/experimental conditions are given by the user in "ref_level_cond" and "ref_level_value" in the params_file respectively. 
+
 Pre-filtering is performed, keeping only genes that have a count of at least 10 in a minimum number of samples. The minimum number of samples is decided by calculating the number of times the reference level value (control condition) is listed in the metadata with the assumption that experimental conditions will be repeated the same number of times. 
+
 Standard differential expression analysis is performed with the DESeq function, and regularized log transformation (rlog) transforms count data to a log2 scale for PCA.
 ```{r DESeq2_run, warning=FALSE, results='hide', message=FALSE}
 # Create DESeq Data Set
@@ -159,6 +162,7 @@ dds <- DESeq(dds)
 rld <- rlog(dds)
 ```
 If input data is designated to be batch corrected, the ComBat_seq() function from the SVA Bioconductor package is used. The batch (condition) to be regressed out is given in the params_file as "batch_cond", and the sample information for this condition is taken from the metadata. 
+
 The group argument of ComBat_seq() specifies biological covariates, whos signals should be preserved in adjusted data. All conditions (columns) from the metadata which are not to be regressed out are passed to the group argument.
 Differential expression analysis is otherwise performed as described above on batch-corrected counts. 
 ```{r DESeq2_run_batch, warning=FALSE, results='hide', message=FALSE, echo = (as.logical(trimws(sample_params$batch_correct)))}
@@ -253,7 +257,8 @@ for (i in 1:length(contrasts)){
 
 # Principle Component Analysis {.title}
 The Bioconductor package PCAtools is used to perform principle component analysis on regularized log transformed count data. 
-Scree plots show principle component numbers on the x-axis, and their respective eigenvalues on the y-axis. 
+Scree plots show principle component numbers on the x-axis, and their respective eigenvalues on the y-axis.
+
 The third graph plots experimental metadata against a number of PCs and their gene loadings to visualize the agreement with the gene expression pattern of each condition for each PC.
 
 ## No Regression
