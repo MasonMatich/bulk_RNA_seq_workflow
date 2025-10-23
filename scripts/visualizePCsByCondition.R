@@ -63,7 +63,7 @@ visualizePCsByCondition <- function(rlog, metadata, title) {
       colour = "grey40"
     ) +
     facet_grid(PCs ~ grouping, scales = "free") +
-    ggtitle(paste0("PC's of Interest Across Experiments by Rep and Strain ", title))+
+    ggtitle(sprintf("PCs %s", title))+
     theme(axis.text.x = element_text(angle = -90))
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -77,7 +77,7 @@ visualizePCsByCondition <- function(rlog, metadata, title) {
     geom_point(size=2)+
     xlab("Principal Component") + 
     ylab("Variance Explained (Log10 Scale)") +
-    ggtitle(paste0("Log10 Y Scale Scree Plot ", title)) +
+    ggtitle(sprintf("Log10 Scree Plot %s", title)) +
     scale_y_log10()
   
   linearScaleScree <- qplot(c(1:(numPCs -1)), variance[1:length(variance)-1]) + 
@@ -85,7 +85,7 @@ visualizePCsByCondition <- function(rlog, metadata, title) {
     geom_point(size=2)+
     xlab("Principal Component") + 
     ylab("Variance Explained") +
-    ggtitle(paste0("Linear Y Scale Scree Plot ", title))
+    ggtitle(sprintf("Linear Scree Plot %s", title))
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # #                        Return All Plots                       # #

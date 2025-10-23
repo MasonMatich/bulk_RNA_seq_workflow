@@ -19,7 +19,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   #   #                            DEG Report                             #   # 
   #   #                                                                   #   #
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  cat("\n\n## DEG Report {.subtitle}")
+  cat("\n\n## DEG Report")
   cat("\n\n")
   knitDataTable(
     df = list(result.obj$DataFrame),
@@ -53,7 +53,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   #   #                                                                   #   #
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   
-  cat("\n\n## Ontology Report {.tabset .subtitle}")
+  cat("\n\n## Ontology Report {.tabset}")
   
   # Translate Wormbase IDs to ENTREZID
   result.obj.list <- translateBioIDs(
@@ -73,33 +73,34 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   cat(paste0("\n\n### Dysregulated\n\n"))
   
   # Reactome Pathway GSE
-  cat("**Reactome Pathway GSEA**")
   knitDataTable(
     df = go.result.list$react_gse,
-    tableName = " Reactome Gene Set Enrichment Analysis",
+    tableName = " Reactome Pathway GSE Of All Differentially Expressed Genes",
     contrast = contrast,
     fileExtension = "Reactome_gsea"
   )
   
   # # # GSEA plot condiitonal rendering of RP GSEA plots
-  # Tabset for Reactome GSEA plots
-  cat("#### {.tabset .tabset-dropdown}\n\n")
-
-  # Print GSEA plot for each react pathway set identified 
-  for (i in 1:nrow(data.frame(go.result.list$react_gse[[1]]))) {
-    if (i > 30) {break} # Dont print over 30 plots
-    cat(sprintf("##### %s \n\n", go.result.list$react_gse[[1]]$Description[i]))
-    print(gseaplot(
-      go.result.list$react_gse[[1]], 
-      by = "all", 
-      title = go.result.list$react_gse[[1]]$Description[i], 
-      geneSetID = go.result.list$react_gse[[1]]$ID[i]))
-    cat("\n\n")
+  if (nrow(go.result.list$react_gse[[1]]) > 0){
+    # Tabset for Reactome GSEA plots
+    cat("#### {.tabset .tabset-dropdown}\n\n")
+    
+    # Print GSEA plot for each react pathway set identified 
+    for (i in 1:nrow(data.frame(go.result.list$react_gse[[1]]))) {
+      if (i > 25) {break} # Dont print over 30 plots
+      cat(sprintf("##### %s \n\n", go.result.list$react_gse[[1]]$Description[i]))
+      print(gseaplot(
+        go.result.list$react_gse[[1]], 
+        by = "all", 
+        title = go.result.list$react_gse[[1]]$Description[i], 
+        geneSetID = go.result.list$react_gse[[1]]$ID[i]))
+      cat("\n\n")
+    }
   }
+  
   
   # GO GSE
   cat("#### \n\n") # Break out of previous tabset
-  cat("**GO GSEA**")
   knitDataTable(
     df = go.result.list$go_gse,
     tableName = " GSE Of All Differentially Expressed Genes",
@@ -108,19 +109,21 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   )
   
   # # # GSEA plot condiitonal rendering
-  # Tabset for GSEA plots
-  cat("#### {.tabset .tabset-dropdown}\n\n")
-
-  # Print GSEA plot for each set identified 
-  for (i in 1:nrow(data.frame(go.result.list$go_gse[[1]]))) {
-    if (i > 30) {break} # Dont print over 30 plots
-    cat(sprintf("##### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
-    print(gseaplot(
-      go.result.list$go_gse[[1]], 
-      by = "all", 
-      title = go.result.list$go_gse[[1]]$Description[i], 
-      geneSetID = go.result.list$go_gse[[1]]$ID[i]))
-    cat("\n\n")
+  if (nrow(go.result.list$go_gse[[1]]) > 0){
+    # Tabset for GSEA plots
+    cat("#### {.tabset .tabset-dropdown}\n\n")
+  
+    # Print GSEA plot for each set identified 
+    for (i in 1:nrow(data.frame(go.result.list$go_gse[[1]]))) {
+      if (i > 25) {break} # Dont print over 30 plots
+      cat(sprintf("##### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
+      print(gseaplot(
+        go.result.list$go_gse[[1]], 
+        by = "all", 
+        title = go.result.list$go_gse[[1]]$Description[i], 
+        geneSetID = go.result.list$go_gse[[1]]$ID[i]))
+      cat("\n\n")
+    }
   }
 
   

@@ -5,9 +5,11 @@ p.caption {
 p code {
   white-space: inherit;
 }
-pre {
+pre, p{
   word-break: normal;
   word-wrap: normal;
+  padding: 8px !important;
+  margin: 8px;
 }
 pre code {
   white-space: inherit;
@@ -15,6 +17,10 @@ pre code {
 
 table.dataTable {
   white-space: nowrap;
+}
+
+.section.level1.title {
+  margin-top: 20px;
 }
 
 .title {
@@ -39,17 +45,14 @@ table.dataTable {
   margin: 0;
 }
 
-.subtitle h2{
+.level2 h2{
   color: #337AB7;
   text-align: center;
-  border-style: solid;
-  border-width: 0 5px;
-  border-color: #337AB7;
-}
-
-pre {
-  padding: 8px !important;
-  margin-left: 8px;
+  border: solid 5px #337AB7;
+  border-radius: 0 10px 10px 0;
+  padding: 3px 0;
+  margin-left: -8px;
+  font-size: 24px;
 }
 
 .nav-tabs {
@@ -87,4 +90,13 @@ pre {
 
 p:has(img){
   text-align: center;
+}
+
+.nav-tabs>li>a:hover {
+  border: solid #ddd;
+  border-width: 1px 1px 0 1px;
+}
+
+.nav>li>a:focus, .nav>li>a:hover {
+  background-color: #f7f7f7;
 }

@@ -5,10 +5,10 @@ params:
   params_file: "sample_params"
   metadata: "metadata_table"
 title: "`r params$dynamic_title`"
-author: "Mason Matich (mason.matich@wsu.edu)"
+author: "Mason Matich (masonmatich@gmail.com)"
 date: "`r Sys.Date()`"
 output: 
-  html_document2:
+  bookdown::html_document2:
     toc: TRUE
     toc_float: TRUE
     toc_depth: 3
@@ -21,7 +21,7 @@ https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
 ```{r library_setup, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
 # # Library Preparation
 # Cran or base R packages required
-cranr <- c("bookdown", "dplyr", "DT", "knitr",  "kableExtra", "ashr", "htmltools", "ggplot2", "PCAtools", "presto")
+cranr <- c("bookdown", "dplyr", "DT", "knitr",  "kableExtra", "ashr", "htmltools", "ggplot2", "PCAtools", "knitrBootstrap")
 
 # Check if the packages are installed if not install
 cranr.new <- cranr[!(cranr%in%installed.packages())]
@@ -48,6 +48,11 @@ sapply(bioconductor.new, library, character.only = TRUE)
 rm(bioconductor, bioconductor.new, cranr, cranr.new)
 ```
 
+```{r datatable_dependencies, warning=FALSE, message=FALSE, include=FALSE}
+# Loads dependences needed to render other datatables
+datatable(data.frame(x = c(1), y = c(1)), extensions = 'Buttons', rownames = FALSE,options = list(buttons = c('copy', 'csv', 'excel', 'pdf')))
+```
+
 ```{r params_setup, warning=FALSE, message=FALSE, echo=FALSE}
 # # Read in Params
 #sample_params <- read.csv(params$params_file)
@@ -67,6 +72,20 @@ source("scripts/knitDataTable.R")
 ```
 
 # DESeq2 Differential Expression Analysis {.title}
+
+## Inputs Received
+Information received from the csv samplesheet:
+```{r report_inputs_csv, warning=FALSE, message=FALSE, echo=FALSE}
+datatable(as.data.frame(sample_params), rownames = FALSE, options = list(dom = "rt", scrollX = TRUE))
+```
+Metadata information received from the tsv table:
+```{r report_inputs_tsv, warning=FALSE, message=FALSE, echo=FALSE}
+print(metadata)
+```
+
+## Analysis Methods
+Here, count data from the RNA-seq experiment is read in the form of a counts matrix. Each column holds data from one sample, and each row represents a gene, such that the i-th row and n-th column tells how reads of gene i were measured in sample n.
+The values received should be un-normalized counts of sequencing reads or fragments.
 ```{r read_in_counts_matrix, warning=FALSE, message=FALSE}
 # # Read Count Matrix
 count.matrix <- read_tsv(trimws(sample_params$salmon_merged_gene_counts_file_path)) %>%
@@ -86,7 +105,7 @@ if (nrow(metadata) != (ncol(count.matrix))){
   stop("number of rows entered as metadata doesn't match number of columns in count matrix.")
 }
 ```
-
+Information entered as metadata describes the samples (columns) of the count matrix. This metadata is combined with the sample/column names from the count matrix so the accuracy of the metadata can be reviewed. Take time to review the table below.
 ```{r DESeq2_design_coldata, warning=FALSE, message=FALSE}
 # Design ColData Matrix
 sample <- colnames(count.matrix)
@@ -100,6 +119,10 @@ for (i in colnames(metadata)){
 colData <- column_to_rownames(colData, "sample")
 ```
 
+```{r report_colData,warning=FALSE, message=FALSE, echo=FALSE}
+print(as.matrix(colData))
+```
+
 ```{r inputval_colData_vs_counts, warning=FALSE, message=FALSE, echo=FALSE}
 # # Input Validation
 # Check matrix design against count matrix columns
@@ -107,7 +130,10 @@ if(all(colnames(count.matrix) != rownames(colData))){
   stop(sprintf("The structure of the colData matrix doesn't match the structure of the count matrix.\n   The received colData is %s.\n   The received count matrix columns are %s", rownames(colData), colnames(count.matrix)))
 }
 ```
-
+Using the count matrix, column metadata, and user-inputed design formula (expressing the variables to be used in modeling), a DESeq data set is created. 
+The experimental variable and the associated control/experimental conditions are given by the user in "ref_level_cond" and "ref_level_value" in the params_file respectively. 
+Pre-filtering is performed, keeping only genes that have a count of at least 10 in a minimum number of samples. The minimum number of samples is decided by calculating the number of times the reference level value (control condition) is listed in the metadata with the assumption that experimental conditions will be repeated the same number of times. 
+Standard differential expression analysis is performed with the DESeq function, and regularized log transformation (rlog) transforms count data to a log2 scale for PCA.
 ```{r DESeq2_run, warning=FALSE, results='hide', message=FALSE}
 # Create DESeq Data Set
 dds <- DESeqDataSetFromMatrix(
@@ -122,7 +148,8 @@ reflevelvalue <- trimws(sample_params$ref_level_value)
 dds[[reflevelcond]] <- relevel(dds[[reflevelcond]], ref = reflevelvalue)
 
 # Subset out genes with low overall counts
-keep <- rowSums(counts(dds) >= 10) >= 4
+smallest.group.size <- length(grep(sprintf("^%s$",reflevelvalue), metadata[[reflevelcond]]))
+keep <- rowSums(counts(dds) >= 10) >= smallest.group.size
 dds <- dds[keep,]
 
 # Run DESeq
@@ -131,7 +158,9 @@ dds <- DESeq(dds)
 # Regularized Log Transform
 rld <- rlog(dds)
 ```
-
+If input data is designated to be batch corrected, the ComBat_seq() function from the SVA Bioconductor package is used. The batch (condition) to be regressed out is given in the params_file as "batch_cond", and the sample information for this condition is taken from the metadata. 
+The group argument of ComBat_seq() specifies biological covariates, whos signals should be preserved in adjusted data. All conditions (columns) from the metadata which are not to be regressed out are passed to the group argument.
+Differential expression analysis is otherwise performed as described above on batch-corrected counts. 
 ```{r DESeq2_run_batch, warning=FALSE, results='hide', message=FALSE, echo = (as.logical(trimws(sample_params$batch_correct)))}
 if (as.logical(trimws(sample_params$batch_correct))) {
   
@@ -161,7 +190,8 @@ if (as.logical(trimws(sample_params$batch_correct))) {
   batch.correct.dds[[reflevelcond]] <- relevel(batch.correct.dds[[reflevelcond]], ref = reflevelvalue)
   
   # Subset out genes with low overall counts
-  keep <- rowSums(counts(batch.correct.dds) >= 10) >= 4
+  smallest.group.size <- length(grep(sprintf("^%s$",reflevelvalue), metadata[[reflevelcond]]))
+keep <- rowSums(counts(batch.correct.dds) >= 10) >= smallest.group.size
   batch.correct.dds <- batch.correct.dds[keep,]
   
   # Run DESeq
@@ -169,20 +199,15 @@ if (as.logical(trimws(sample_params$batch_correct))) {
   
   # Regularized Log Transform
   batch.correct.rld <- rlog(batch.correct.dds)
-  
-  # Cleanup
-  rm(batch, batch.correct)
 }
-
-# Cleanup
-rm(keep)
 ```
 
+```{r cleanup_2, warning=FALSE, message=FALSE, echo=FALSE}
+# Cleanup
+rm(batch, batch.correct, keep)
+```
+Reference level condition and value (ref_level_cond and ref_level_value respectively) inputs from params_file are used to create contrast terms to compare treatment samples with control samples. This relies on the design formula being formatted correctly to produce comparisons relevant to the experimental condition.
 ```{r DESeq2_contrasts, warning=FALSE, message=FALSE, results='hide'}
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-#  Logic here uses the reference level condition and value inputs to create   #
-#  contrast terms assumed to compare treatment samples with control samples   #
-
 # # Find relevant contrasts
 contrasts <- list()
 
@@ -200,9 +225,6 @@ for (i in 1:length(comp)){
 ```
 
 ```{r DESeq2_batch_select, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
-# Find results from relevant contrasts
-results <- list()
-
 # Select non-batch corrected dds for further analysis
 dds.for.analysis <- dds
 
@@ -211,8 +233,11 @@ if (as.logical(trimws(sample_params$batch_correct))){
   dds.for.analysis <- batch.correct.dds
 }
 ```
-
+Based on the number of experimental conditions (identified in the ref_level_cond column of the metadata) and the contrast terms comparing them to the experimental control (ref_level_value), differential expression results are extracted from the DESeq data set object.
 ```{r DESeq2_get_results, warning=FALSE, message=FALSE, results='hide'}
+# Find results from relevant contrasts
+results <- list()
+
 # Pull results from DESeq object with contrasts
 for (i in 1:length(contrasts)){
   results[[i]] <- list()
@@ -227,29 +252,40 @@ for (i in 1:length(contrasts)){
 ```
 
 # Principle Component Analysis {.title}
-```{r PCA_report, warning=FALSE, message=FALSE, results='hide'}
+The Bioconductor package PCAtools is used to perform principle component analysis on regularized log transformed count data. 
+Scree plots show principle component numbers on the x-axis, and their respective eigenvalues on the y-axis. 
+The third graph plots experimental metadata against a number of PCs and their gene loadings to visualize the agreement with the gene expression pattern of each condition for each PC.
+
+## No Regression
+```{r PCA_report, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
 # View non-batch corrected
 pca <- visualizePCsByCondition(
   rlog = rld,
   metadata = colData,
-  title = "Before Replicate Batch Correction")
+  title = sprintf("Before Regressing out%s", params$batch_cond))
 
 pca$logScaleScree
 pca$linearScaleScree
 pca$selectedPCs
 ```
 
-```{r PCA_batch_report, warning=FALSE, message=FALSE, results='hide', echo = (as.logical(trimws(sample_params$batch_correct)))}
+```{r PCA_batch_report_header, warning=FALSE, message=FALSE, results='asis', echo = FALSE}
+if(as.logical(trimws(sample_params$batch_correct))){
+  cat(sprintf("\n\n##%s Regressed Out", sample_params$batch_cond))
+}
+```
+
+```{r PCA_batch_report, warning=FALSE, message=FALSE, results='hide', echo = FALSE}
 # View Rep effect corrected
 if(as.logical(trimws(sample_params$batch_correct))){
-pca.batch <- visualizePCsByCondition(
-    rlog = batch.correct.rld,
-    metadata = colData,
-    title = "After Replicate Batch Correction")
-
-print(pca.batch$logScaleScree)
-print(pca.batch$linearScaleScree)
-print(pca.batch$selectedPCs)
+  pca.batch <- visualizePCsByCondition(
+      rlog = batch.correct.rld,
+      metadata = colData,
+      title = sprintf("After Regressing out%s", params$batch_cond))
+  
+  print(pca.batch$logScaleScree)
+  print(pca.batch$linearScaleScree)
+  print(pca.batch$selectedPCs)
 }
 ```
 
@@ -291,22 +327,17 @@ if(as.logical(trimws(sample_params$batch_correct))){
 rm(dds, batch.correct.dds, rld, batch.correct.rld, colData, count.matrix, comp, pattern, sample, reflevelcond, reflevelvalue, metadata, pca, pca.batch)
 ```
 
-```{r datatable_dependencies, warning=FALSE, message=FALSE, include=FALSE}
-# Doesn't render in bookdown, but loades dependences needed to render other datatables
-datatable(data.frame(x = c(1), y = c(1)), extensions = 'Buttons', rownames = FALSE,options = list(buttons = c('copy', 'csv', 'excel', 'pdf')))
-```
-
 ```{r compile_report, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 for (i in 1:length(results)){
   compileReport(
-    result.obj = results[[1]], 
+    result.obj = results[[i]], 
     contrast = sprintf("%s_%s_vs_%s", contrasts[[i]][1], contrasts[[i]][2], contrasts[[i]][3]), 
     l2fc_filter = 0.8,
     padj_filter = 0.1)
 }
 ```
 
-```{r cleanup_2, warning=FALSE, message=FALSE, echo=FALSE}
+```{r cleanup_3, warning=FALSE, message=FALSE, echo=FALSE}
 rm(contrasts, results, dds.for.analysis, gene.reference, i, sample_params, callClusterProfilerFunc, compileReport, translateBioIDs, emptyTableMessage, knitDataTable, visualizePCsByCondition)
 ```
 

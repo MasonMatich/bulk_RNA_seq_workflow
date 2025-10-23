@@ -9,7 +9,7 @@ knitDataTable <- function(df, tableName, contrast, fileExtension, pageLength = 5
                             rownames = FALSE,
                             caption = tableName,
                             options = list(
-                              dom = "Bfrtip",
+                              dom = "frtipB",
                               buttons = list('copy',
                                              list(extend = 'csv', filename = sprintf("%s_%s", gsub(" ", "_", tolower(contrast)), fileExtension)),
                                              list(extend = 'excel', filename = sprintf("%s_%s", gsub(" ", "_", tolower(contrast)), fileExtension))
