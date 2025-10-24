@@ -21,7 +21,7 @@ https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
 ```{r library_setup, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
 # # Library Preparation
 # Cran or base R packages required
-cranr <- c("bookdown", "dplyr", "DT", "knitr",  "kableExtra", "ashr", "htmltools", "ggplot2", "PCAtools", "knitrBootstrap")
+cranr <- c("bookdown", "dplyr", "DT", "knitr",  "kableExtra", "ashr", "htmltools", "ggplot2", "PCAtools", "knitrBootstrap", "stringr")
 
 # Check if the packages are installed if not install
 cranr.new <- cranr[!(cranr%in%installed.packages())]
@@ -41,8 +41,8 @@ if (length(bioconductor.new)) {
   BiocManager::install(bioconductor.new, type="source")
 }
 # load required packages
-sapply(cranr.new, library, character.only = TRUE)
-sapply(bioconductor.new, library, character.only = TRUE)
+sapply(cranr, library, character.only = TRUE)
+sapply(bioconductor, library, character.only = TRUE)
 ```
 ```{r warning=FALSE, message=FALSE, echo=FALSE}
 rm(bioconductor, bioconductor.new, cranr, cranr.new)
@@ -50,7 +50,7 @@ rm(bioconductor, bioconductor.new, cranr, cranr.new)
 
 ```{r datatable_dependencies, warning=FALSE, message=FALSE, include=FALSE}
 # Loads dependences needed to render other datatables
-datatable(data.frame(x = c(1), y = c(1)), extensions = 'Buttons', rownames = FALSE,options = list(buttons = c('copy', 'csv', 'excel', 'pdf')))
+DT::datatable(data.frame(x = c(1), y = c(1)), extensions = 'Buttons', rownames = FALSE,options = list(buttons = c('copy', 'csv', 'excel', 'pdf')))
 ```
 
 ```{r params_setup, warning=FALSE, message=FALSE, echo=FALSE}
@@ -267,7 +267,7 @@ The third graph plots experimental metadata against a number of PCs and their ge
 pca <- visualizePCsByCondition(
   rlog = rld,
   metadata = colData,
-  title = sprintf("Before Regressing out%s", params$batch_cond))
+  title = sprintf("Before Regressing out%s", str_to_title(sample_params$batch_cond)))
 
 pca$logScaleScree
 pca$linearScaleScree
@@ -276,7 +276,7 @@ pca$selectedPCs
 
 ```{r PCA_batch_report_header, warning=FALSE, message=FALSE, results='asis', echo = FALSE}
 if(as.logical(trimws(sample_params$batch_correct))){
-  cat(sprintf("\n\n##%s Regressed Out", sample_params$batch_cond))
+  cat(sprintf("\n\n##%s Regressed Out", str_to_title(sample_params$batch_cond)))
 }
 ```
 
@@ -286,7 +286,7 @@ if(as.logical(trimws(sample_params$batch_correct))){
   pca.batch <- visualizePCsByCondition(
       rlog = batch.correct.rld,
       metadata = colData,
-      title = sprintf("After Regressing out%s", params$batch_cond))
+      title = sprintf("After Regressing out%s", str_to_title(sample_params$batch_cond)))
   
   print(pca.batch$logScaleScree)
   print(pca.batch$linearScaleScree)
@@ -329,7 +329,7 @@ if(as.logical(trimws(sample_params$batch_correct))){
 }
 
 # Cleanup
-rm(dds, batch.correct.dds, rld, batch.correct.rld, colData, count.matrix, comp, pattern, sample, reflevelcond, reflevelvalue, metadata, pca, pca.batch)
+rm(dds, batch.correct.dds, rld, batch.correct.rld, colData, count.matrix, comp, pattern, sample, reflevelcond, reflevelvalue, metadata, pca, pca.batch, smallest.group.size)
 ```
 
 ```{r compile_report, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
