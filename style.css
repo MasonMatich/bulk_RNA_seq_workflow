@@ -9,7 +9,7 @@ pre, p{
   word-break: normal;
   word-wrap: normal;
   padding: 8px !important;
-  margin: 8px;
+  margin: 0 8px;
 }
 pre code {
   white-space: inherit;
@@ -71,12 +71,17 @@ table.dataTable {
   padding: 0 0 0 3px;
 }
 
-.tab-content>.active {
+.analysisreport>.tab-content>.level3.active {
   background-color: #f7f7f7;
-  padding: 0 0 3px 3px;
+  padding: 1em;
   border-width: 0 1px 1px 1px;
   border-style: solid;
   border-color: #ddd;
+}
+
+.analysis{
+  margin: 10px;
+  border: dashed 1px darkgrey;
 }
 
 .nav-tabs>li.active>a, .nav-tabs>li.active>a:focus, .nav-tabs>li.active>a:hover {
@@ -88,8 +93,12 @@ table.dataTable {
   border: none;
 }
 
-p:has(img){
+p:has(img), .section.level4:has(img), .section.level3:has(img){
   text-align: center;
+}
+
+img {
+  padding: 4px 0 !important;
 }
 
 .nav-tabs>li>a:hover {
@@ -99,4 +108,16 @@ p:has(img){
 
 .nav>li>a:focus, .nav>li>a:hover {
   background-color: #f7f7f7;
+}
+
+.level4>h4{
+  font-size: 16px;
+  color: #337AB7;
+  margin: 0;
+  padding: 10px 0 !important;
+  text-align: center;
+}
+
+.datatables {
+    text-align: left !important;
 }

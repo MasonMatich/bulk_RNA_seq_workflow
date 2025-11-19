@@ -1,0 +1,137 @@
+---
+title: "Bulk RNA-seq Workflow"
+output: html_document
+---
+Workflow for analyzing bulk RNA-seq data (differential expression + enrichment)
+
+by Mason Matich (masonmatich@gmail.com)
+<br><br>
+
+## Overview
+<hr>
+
+This repository implements a reproducible analysis pipeline for **bulk RNA-seq data** using the R ecosystem. The workflow:
+
+- Performs differential gene expression (DGE) analysis via **DESeq2**.
+
+- Conducts functional enrichment (GO terms and Reactome pathways) via **clusterProfiler** and **ReactomePA** (and related Bioconductor tools).
+
+- Generates results (tables + plots) and a rendered RMarkdown/bookdown‐based report.
+
+- Is structured to be adaptable to any experiment with count data + metadata.
+
+This is especially appropriate for users with basic familiarity in R / Bioconductor who need a well-documented pipeline that ties from raw counts → DE → enrichment → report output in a reproducible manner.
+<br><br>
+
+## Repository Structure
+<hr>
+
+**bulk_RNA_seq_workflow.Rproj**   # RStudio project file
+
+**index.Rmd**         # Entry point RMarkdown for the entire workflow
+
+**style.css**          # Custom styling for bookdown HTML
+
+**\_output.yml**        # Bookdown output config
+
+**\_bookdown.yml**      # Bookdown config  
+
+**example_bookdown_render_code.txt**  # Example console command to render the report  
+
+**scripts/** — contains modular script(s) used to load data, run DESeq2, run enrichment, produce plots.
+
+**results/** — holds all final data artifacts (tables, .rds objects, plots in PDF/PNG, HTML report in docs/).
+
+**docs/** — stores the dependencies for the RMarkdown/bookdown rendered output (HTML).
+
+Project configuration files ensure consistent RStudio/IDE experience.
+<br><br>
+
+## Getting Started
+<hr>
+
+Prerequisites
+R version ≥ 4.x
+
+### Prepare input data:
+**dynamic_title** - This argument is the text that will be displayed at the very top of the bookdown file output.
+  
+**project** - This argument is used to name the many csv files which are written to the /results folder or file downloads from data tables using the download buttons. 
+  
+**params_file** - The filepath for the input sampleInfo.csv file should be entered here. Below, the structure of this csv file is described.
+
+    counts_matrix_file_path: This specifies the filepath for the tsv file which holds the count matrix. 
+
+    ref_level_cond: A reference level (control condition) must be specified for DESeq2
+
+    ref_level_value: 
+
+    design: 
+
+    batch_correct: 
+
+    batch_cond: 
+
+**metadata** - A metadata/sample sheet (samples × attributes, e.g., condition, batch).
+Place these inputs in a folder (or point to them via parameters in the scripts).
+Edit index.Rmd (or a parameters file) to specify your input file paths, organism, comparisons of interest, and output directory.
+
+    # Example metadata.tsv structure:
+    replicate strain
+    rep1  hrde1
+    rep2  hrde1
+    rep3  hrde1
+    rep1  hrde2
+    rep2  hrde2
+    rep3  hrde2
+    rep1  wt
+    rep2  wt
+    rep3  wt
+
+## Render the report:
+Use the bookdown render_book() function to render the index.Rmd analysis. example_bookdown_render_code.txt has a sample render_book() command with examples for params inputs:
+    
+    bookdown::render_book("index.rmd", params=list(
+           dynamic_title = "",
+           project = "",
+           params_file = "scripts/sampleInfo.csv",
+           metadata = "scripts/metadata.txt"
+    ))
+<br><br>
+
+## Workflow Details
+<hr>
+
+### 1. Differential Expression Analysis
+The scripts load the count matrix and metadata, filter low‐count genes, create a DESeqDataSet, estimate size factors, fit the model, and extract results for specified comparisons.
+Significant DEGs are filtered (e.g., adjusted p-value < 0.05, absolute log2 fold change ≥ 1) and saved.
+Plots include MA plots, volcano plots, heatmap of top DEGs, PCA/MLA of samples.
+
+### 2. Functional Enrichment
+The DEGs (typically up and down regulated) are mapped to Entrez IDs and passed into clusterProfiler functions: enrichGO(), enrichPathway() (via ReactomePA), optionally gseGO() or gsePathway().
+Results are plotted (bar plots, dot plots, enrichment maps) and tables of enriched terms/pathways (with gene lists) exported.
+The report includes interpretation sections (what biological processes or pathways are driven by the DEGs) to aid publication or presentation.
+
+### 3. Reporting
+The index.Rmd uses bookdown to structure the report: Introduction → Methods → Results → Discussion → Appendices (with full tables).
+Figures are auto‐included, and links to raw result files provided.
+The results folder is referenced (so that if you share the folder, others can trace every output from raw data → final figure).
+<br><br>
+
+## Assumptions & Limitations
+<hr>
+
+This pipeline assumes you have a count matrix and sample metadata prepared. It does not include raw read alignment or quantification (e.g., via STAR, Salmon).
+The pipeline uses DESeq2 for bulk data; it is not configured for single‐cell RNA-seq.
+The enrichment uses default gene‐ontology/Reactome databases; you may need to adapt organism code or database versions for non‐human model organisms.
+For very large datasets (many samples/genes), computational time and memory may increase substantially—consider down‐sampling or high‐performance compute resources.
+The interpretation in the report is generic template; you should customize “Discussion” for your experiment’s biological context.
+<br><br>
+
+## Contact
+<hr>
+**Author**: Mason Matich
+
+**GitHub**: https://github.com/MasonMatich
+
+**Email**: (masonmatich@gmail.com)

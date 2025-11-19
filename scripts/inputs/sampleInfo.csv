@@ -1,0 +1,2 @@
+title, project, counts_matrix_file_path, metadata, ref_level_cond, ref_level_value, design, batch_correct, batch_cond
+Chen & Phillips HRDE-1/HRDE-2, chen_phillips_hrde1_hrde2, ~/Documents/research_labs/projects/bulk_RNA_seq_workflow/raw_data/chen_phillips/salmon.merged.gene_counts.tsv, scripts/inputs/chen_phillips_metadata.txt, strain, wt, ~ replicate + strain, TRUE, replicate
