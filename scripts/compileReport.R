@@ -5,7 +5,7 @@
 compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   
   # Create comment structure for bookdown render
-  cat(sprintf("# %s {.title}\n\n", contrast))
+  cat(sprintf("## %s\n\n", contrast))
 
   # Show exact call which invoked function
   call_txt <- paste(deparse(match.call()), collapse = "\n")
@@ -19,7 +19,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   #   #                            DEG Report                             #   # 
   #   #                                                                   #   #
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-  cat("\n\n## DEG Report")
+  cat("\n\n### DEG Report")
   cat("\n\n")
   knitDataTable(
     df = list(result.obj$DataFrame),
@@ -53,7 +53,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   #   #                                                                   #   #
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   
-  cat("\n\n## Ontology Report {.tabset}")
+  cat("\n\n### Ontology Report {.tabset}")
   
   # Translate Wormbase IDs to ENTREZID
   result.obj.list <- translateBioIDs(
@@ -70,7 +70,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # # #             Dysregulated Reactome Pathway GSE, GO GSE             # # # 
-  cat(paste0("\n\n### Dysregulated\n\n"))
+  cat(paste0("\n\n#### Dysregulated\n\n"))
   
   # Reactome Pathway GSE
   knitDataTable(
@@ -83,12 +83,12 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   # # # GSEA plot condiitonal rendering of RP GSEA plots
   if (nrow(go.result.list$react_gse[[1]]) > 0){
     # Tabset for Reactome GSEA plots
-    cat("#### {.tabset .tabset-dropdown}\n\n")
+    cat("##### {.tabset .tabset-dropdown}\n\n")
     
     # Print GSEA plot for each react pathway set identified 
     for (i in 1:nrow(data.frame(go.result.list$react_gse[[1]]))) {
       if (i > 25) {break} # Dont print over 30 plots
-      cat(sprintf("##### %s \n\n", go.result.list$react_gse[[1]]$Description[i]))
+      cat(sprintf("###### %s \n\n", go.result.list$react_gse[[1]]$Description[i]))
       print(gseaplot(
         go.result.list$react_gse[[1]], 
         by = "all", 
@@ -100,7 +100,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   
   
   # GO GSE
-  cat("#### \n\n") # Break out of previous tabset
+  cat("##### \n\n") # Break out of previous tabset
   knitDataTable(
     df = go.result.list$go_gse,
     tableName = " GSE Of All Differentially Expressed Genes",
@@ -111,12 +111,12 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   # # # GSEA plot condiitonal rendering
   if (nrow(go.result.list$go_gse[[1]]) > 0){
     # Tabset for GSEA plots
-    cat("#### {.tabset .tabset-dropdown}\n\n")
+    cat("##### {.tabset .tabset-dropdown}\n\n")
   
     # Print GSEA plot for each set identified 
     for (i in 1:nrow(data.frame(go.result.list$go_gse[[1]]))) {
       if (i > 25) {break} # Dont print over 30 plots
-      cat(sprintf("##### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
+      cat(sprintf("###### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
       print(gseaplot(
         go.result.list$go_gse[[1]], 
         by = "all", 
@@ -129,7 +129,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # # #    Upregulated GO classification, GO over-representation, RP over-representation    # # #
-  cat(paste0("\n\n### Upregulated\n\n"))
+  cat(paste0("\n\n#### Upregulated\n\n"))
   
   # GO classification
   knitDataTable(
@@ -158,7 +158,7 @@ compileReport <- function(result.obj, contrast, l2fc_filter, padj_filter){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # # #    Downregulated GO classification, GO over-representation, RP over-representation    # # #
-  cat(paste0("\n\n### Downregulated\n\n"))
+  cat(paste0("\n\n#### Downregulated\n\n"))
   
   # GO classification
   knitDataTable(

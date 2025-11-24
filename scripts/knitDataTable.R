@@ -18,7 +18,7 @@ knitDataTable <- function(df, tableName, contrast, fileExtension, pageLength = 5
                               scrollX = TRUE)))
     print(htmltools::tagList(table[[1]]))
     cat("\n\n")
-    write.csv(df[[1]], file = sprintf("./results/%s_%s.csv", gsub(" ", "_", tolower(contrast)), fileExtension))
+    write.csv(df[[1]], file = sprintf("../results/%s_%s.csv", gsub(" ", "_", tolower(contrast)), fileExtension))
   }else{emptyTableMessage(tableName)}
   
   # clean up environment
