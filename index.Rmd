@@ -28,7 +28,7 @@ if (length(cranr.new)) {
 }
 
 # List of bioconductor packages required
-bioconductor<-c("ReactomePA", "clusterProfiler", "DESeq2", "GOSemSim", "sva", "vsn", "org.Ce.eg.db", "EnhancedVolcano")
+bioconductor<-c("ReactomePA", "clusterProfiler", "DESeq2", "GOSemSim", "sva", "vsn", "org.Ce.eg.db", "EnhancedVolcano", "rrvgo")
 
 # Check if the packages were installed if not install
 bioconductor.new <- bioconductor[!(bioconductor%in%installed.packages())]
@@ -54,11 +54,15 @@ source("scripts/compileReport.R")
 source("scripts/emptyTableMessage.R")
 source("scripts/visualizePCsByCondition.R")
 source("scripts/knitDataTable.R")
+source("scripts/reduceGORedundancy.R")
 ```
 
 ```{r datatable_dependencies, warning=FALSE, message=FALSE, include=FALSE}
 # Loads dependences needed to render other datatables
 DT::datatable(data.frame(x = c(1), y = c(1)), extensions = 'Buttons', rownames = FALSE,options = list(buttons = c('copy', 'csv', 'excel', 'pdf')))
+
+# # Create object with GO data for measuring semantic similarity (rrvgo)
+semantic_data <- GOSemSim::godata(org.Ce.eg.db, ont="BP", keytype = "ENTREZID")
 ```
 
 ```{r params_setup, warning=FALSE, message=FALSE, echo=FALSE}
@@ -89,10 +93,12 @@ for (sample_idx in 1:nrow(all_sample_params)) {
   )
   
   cat(res, sep = '\n')
+  
+  # Clean up
+  rm(sample_params, res, metadata)
 }
 ```
 
 ```{r cleanup_3, warning=FALSE, message=FALSE, echo=FALSE}
-rm(contrasts, results, dds.for.analysis, gene.reference, i, sample_params, callClusterProfilerFunc, compileReport, translateBioIDs, emptyTableMessage, knitDataTable, visualizePCsByCondition)
+rm(contrasts, results, dds.for.analysis, gene.reference, i, callClusterProfilerFunc, compileReport, translateBioIDs, emptyTableMessage, knitDataTable, visualizePCsByCondition)
 ```
-

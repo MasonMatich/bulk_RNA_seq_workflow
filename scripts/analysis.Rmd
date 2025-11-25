@@ -2,7 +2,8 @@
 title: "analysis"
 output: html_document
 ---
-# Sample 1. `r sample_params$sample_title` Analysis {.title}
+
+# `r sprintf("%d. %s Analysis", sample_idx, sample_params$sample_title) ` {.title}
 
 Metadata information received from the tsv table:
 ```{r report_inputs_tsv, warning=FALSE, message=FALSE, echo=FALSE}
@@ -268,6 +269,7 @@ for (i in 1:length(results)){
   compileReport(
     result.obj = results[[i]], 
     contrast = sprintf("%s_%s_vs_%s", contrasts[[i]][1], contrasts[[i]][2], contrasts[[i]][3]), 
+    sample_name = trimws(sample_params$sample_name),
     l2fc_filter = 0.8,
     padj_filter = 0.1)
 }

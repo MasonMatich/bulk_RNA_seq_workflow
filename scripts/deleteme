@@ -1,0 +1,20 @@
+  # # # GSEA plot condiitonal rendering
+  if (nrow(go.result.list$go_gse[[1]]) > 0){
+    # Tabset for GSEA plots
+    cat("###### {.tabset .tabset-dropdown}\n\n")
+    
+    # Print GSEA plot for each set identified 
+    for (i in 1:nrow(data.frame(go.result.list$go_gse[[1]]))) {
+      if (i > 25) {break} # Dont print over 30 plots
+      cat(sprintf("####### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
+      
+      print(gseaplot(
+        go.result.list$go_gse[[1]], 
+        by = "all", 
+        title = go.result.list$go_gse[[1]]$Description[i], 
+        geneSetID = go.result.list$go_gse[[1]]$ID[i]))
+      
+      cat("\n\n")
+    }
+  }
+  
