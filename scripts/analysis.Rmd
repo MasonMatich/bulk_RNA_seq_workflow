@@ -13,9 +13,46 @@ print(metadata)
 ## Analysis Methods
 Here, count data from the RNA-seq experiment is read in the form of a counts matrix. Each column holds data from one sample, and each row represents a gene, such that the i-th row and n-th column tells how reads of gene i were measured in sample n.
 The values received should be un-normalized counts of sequencing reads or fragments.
-```{r read_in_counts_matrix, warning=FALSE, message=FALSE}
+```{r read_in_counts_matrix_prep, warning=FALSE, message=FALSE}
 # # Read Count Matrix
-count.matrix <- read_tsv(trimws(sample_params$salmon_merged_gene_counts_file_path)) %>%
+counts_file <- trimws(sample_params$salmon_merged_gene_counts_file_path)
+```
+
+
+```{r read_in_counts_matrix_file_validation, warning=FALSE, message=FALSE, echo=FALSE}
+# Validate file exists
+if (!file.exists(counts_file)) {
+  stop(sprintf("❌ Count matrix file not found: %s\nPlease check the path in sampleInfo.csv", counts_file))
+}
+
+# Check file size
+file_size_mb <- file.size(counts_file) / 1e6
+if (file_size_mb > 500) {
+  cat(sprintf("⚠️  Large count matrix (%.1f MB). Loading may take time...\n", file_size_mb))
+}
+```
+
+
+```{r read_in_counts_matrix, warning=FALSE, message=FALSE}
+count.matrix <- read_tsv(counts_file)
+```
+
+
+```{r read_in_counts_matrix_structure_validation, warning=FALSE, message=FALSE, echo=FALSE}
+# Validate count matrix structure
+if (!"gene_id" %in% colnames(count.matrix)) {
+  stop("❌ Count matrix must have a 'gene_id' column")
+}
+
+if (ncol(count.matrix) < 3) {
+  stop(sprintf("❌ Count matrix has only %d columns. Expected at least 3 (gene_id, gene_name, and sample data)",
+               ncol(count.matrix)))
+}
+```
+
+
+```{r restructure_counts_matrix, warning=FALSE, message=FALSE}
+count.matrix <- count.matrix %>%
   mutate(across(3:ncol(.), ~ as.integer(.x))) %>%
   column_to_rownames("gene_id")
 
@@ -66,11 +103,29 @@ The experimental variable and the associated control/experimental conditions are
 Pre-filtering is performed, keeping only genes that have a count of at least 10 in a minimum number of samples. The minimum number of samples is decided by calculating the number of times the reference level value (control condition) is listed in the metadata with the assumption that experimental conditions will be repeated the same number of times.
 
 Standard differential expression analysis is performed with the DESeq function, and regularized log transformation (rlog) transforms count data to a log2 scale for PCA.
-```{r DESeq2_run, warning=FALSE, results='hide', message=FALSE}
+```{r DESeq2_prep, warning=FALSE, results='hide', message=FALSE}
 # Set Reference Level
 reflevelcond <- trimws(sample_params$ref_level_cond)
 reflevelvalue <- trimws(sample_params$ref_level_value)
+```
 
+
+```{r DESeq2_run_validation, warning=FALSE, results='hide', message=FALSE, echo=FALSE}
+# Validate that ref_level_cond exists in metadata
+if (!reflevelcond %in% colnames(metadata)) {
+  stop(sprintf("❌ Reference level condition '%s' not found in metadata columns.\n   Available columns: %s",
+               reflevelcond, paste(colnames(metadata), collapse=", ")))
+}
+
+# Validate that ref_level_value exists in the reference condition
+if (!reflevelvalue %in% metadata[[reflevelcond]]) {
+  stop(sprintf("❌ Reference level value '%s' not found in metadata column '%s'.\n   Available values: %s",
+               reflevelvalue, reflevelcond, paste(unique(metadata[[reflevelcond]]), collapse=", ")))
+}
+```
+
+
+```{r DESeq2_run, warning=FALSE, results='hide', message=FALSE}
 # Run DESeq2 analysis
 deseq_result <- runDESeq2Analysis(
   count.matrix = count.matrix,
@@ -89,14 +144,18 @@ If input data is designated to be batch corrected, the ComBat_seq() function fro
 
 The group argument of ComBat_seq() specifies biological covariates, whos signals should be preserved in adjusted data. All conditions (columns) from the metadata which are not to be regressed out are passed to the group argument.
 Differential expression analysis is otherwise performed as described above on batch-corrected counts.
-```{r DESeq2_run_batch, warning=FALSE, results='hide', message=FALSE, echo = (as.logical(trimws(sample_params$batch_correct)))}
-if (as.logical(trimws(sample_params$batch_correct))) {
 
+```{r DESeq2_run_batch_validation, warning=FALSE, message=FALSE, echo=FALSE}
+if (as.logical(trimws(sample_params$batch_correct))) {
   # Check that condition for batch correction matches column metadata
   if(all(trimws(sample_params$batch_cond) != colnames(metadata))){
     stop(sprintf("The given condition for batch correction:%s, doesn't match any prior conditions: %s", sample_params$batch_cond, colnames(metadata)))
   }
+}
+```
 
+```{r DESeq2_run_batch, warning=FALSE, results='hide', message=FALSE, echo = (as.logical(trimws(sample_params$batch_correct)))}
+if (as.logical(trimws(sample_params$batch_correct))) {
   # Replicate / Batch Correction
   batch <- trimws(sample_params$batch_cond)
 
@@ -118,12 +177,10 @@ if (as.logical(trimws(sample_params$batch_correct))) {
 
   batch.correct.dds <- batch_deseq_result$dds
   batch.correct.rld <- batch_deseq_result$rld
+  
+  # Cleanup
+  rm(batch, batch.correct, keep)
 }
-```
-
-```{r cleanup_2, warning=FALSE, message=FALSE, echo=FALSE}
-# Cleanup
-rm(batch, batch.correct, keep)
 ```
 
 Reference level condition and value (ref_level_cond and ref_level_value respectively) inputs from sampleInfo.csv are used to create contrast terms to compare treatment samples with control samples. This relies on the design formula being formatted correctly to produce comparisons relevant to the experimental condition.
@@ -179,17 +236,20 @@ Scree plots show principle component numbers on the x-axis, and their respective
 The third graph plots experimental metadata against a number of PCs and their gene loadings to visualize the agreement with the gene expression pattern of each condition for each PC.
 
 ### No Regression
-```{r PCA_report, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
+```{r PCA_report, warning=FALSE, message=FALSE, results='hide', echo=FALSE, out.width="90%", fig.align="center"}
 # View non-batch corrected
 pca <- visualizePCsByCondition(
   rlog = rld,
   metadata = colData,
-  title = sprintf("Before Regressing out%s", str_to_title(sample_params$batch_cond)))
+  title = ""
+  )
+pca$logScaleScree | pca$linearScaleScree
+```
 
-pca$logScaleScree
-pca$linearScaleScree
+```{r PCA_report_2, warning=FALSE, message=FALSE, results='hide', echo=FALSE, out.width="80%", fig.align="center"}
 pca$selectedPCs
 ```
+
 
 ```{r PCA_batch_report_header, warning=FALSE, message=FALSE, results='asis', echo = FALSE}
 if(as.logical(trimws(sample_params$batch_correct))){
@@ -197,23 +257,28 @@ if(as.logical(trimws(sample_params$batch_correct))){
 }
 ```
 
-```{r PCA_batch_report, warning=FALSE, message=FALSE, results='hide', echo = FALSE}
+```{r PCA_batch_report, warning=FALSE, message=FALSE, results='hide', echo = FALSE, out.width="90%", fig.align="center"}
 # View Rep effect corrected
 if(as.logical(trimws(sample_params$batch_correct))){
   pca.batch <- visualizePCsByCondition(
       rlog = batch.correct.rld,
       metadata = colData,
-      title = sprintf("After Regressing out%s", str_to_title(sample_params$batch_cond)))
-  
-  print(pca.batch$logScaleScree)
-  print(pca.batch$linearScaleScree)
+      title = ""
+      )
+  print(pca.batch$logScaleScree | pca.batch$linearScaleScree)
+}
+```
+
+```{r PCA_batch_report_2, warning=FALSE, message=FALSE, results='hide', echo = FALSE, out.width="80%", fig.align="center"}
+if(as.logical(trimws(sample_params$batch_correct))){
   print(pca.batch$selectedPCs)
 }
 ```
 
+
 ```{r PCA_write_pdf, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
 # Save PCA to PDF
-pdf(sprintf("../figures/%s_PCA.pdf", trimws(sample_params$sample_name)))
+pdf(file.path(project_dirs$figures, sprintf("%s_PCA.pdf", trimws(sample_params$sample_name))))
 
 # View non-batch corrected
 pca$logScaleScree
@@ -231,18 +296,19 @@ dev.off()
 ```
 
 ```{r save_data, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # #                               Save Files                                # #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Save DESeq Output
-saveRDS(dds, file = sprintf("../results/%s_dds.rds", trimws(sample_params$sample_name)))
-saveRDS(rld, file = sprintf("../results/%s_rld.rds", trimws(sample_params$sample_name)))
+# Save DESeq Output using robust paths
+sample_name_clean <- trimws(sample_params$sample_name)
+saveRDS(dds, file = file.path(project_dirs$results, sprintf("%s_dds.rds", sample_name_clean)))
+saveRDS(rld, file = file.path(project_dirs$results, sprintf("%s_rld.rds", sample_name_clean)))
 
 # Save Batch Corrected DESeq Output
 if(as.logical(trimws(sample_params$batch_correct))){
-  saveRDS(batch.correct.dds, file = sprintf("../results/%s_batch_correct_dds.rds", trimws(sample_params$sample_name)))
-  saveRDS(batch.correct.rld, file = sprintf("../results/%s_batch_correct_rld.rds", trimws(sample_params$sample_name)))
+  saveRDS(batch.correct.dds, file = file.path(project_dirs$results, sprintf("%s_batch_correct_dds.rds", sample_name_clean)))
+  saveRDS(batch.correct.rld, file = file.path(project_dirs$results, sprintf("%s_batch_correct_rld.rds", sample_name_clean)))
 }
 
 # Cleanup

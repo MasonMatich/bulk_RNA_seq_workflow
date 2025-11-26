@@ -27,11 +27,14 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   
   # # Volcano Plot
   volcano_file <- sprintf("%s_%s_volcano.png", sample_name, gsub(" ", "_", tolower(contrast)))
-  volcano_path <- file.path("..", "figures", volcano_file)
+  volcano_path <- file.path(project_dirs$figures, volcano_file)
+
+  # Relative path for HTML display
+  volcano_rel_path <- file.path("figures", volcano_file)
 
   volcano <- EnhancedVolcano(
     result.obj$DataFrame,
-    lab = rownames(result.obj$DataFrame),
+    lab = result.obj$DataFrame$gene_name,
     x = 'log2FoldChange',
     y = 'padj',
     title = contrast,
@@ -41,7 +44,7 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   )
 
   ggsave(volcano_path, volcano, height = 12, width = 10, units = "in", dpi = 300)
-  cat(sprintf('<img src="%s" width="80%%"/>\n\n', paste0("figures/", volcano_file)))
+  cat(sprintf('<img src="%s" width="80%%"/>\n\n', volcano_rel_path))
   
   # # MA Plot
   plotMA(

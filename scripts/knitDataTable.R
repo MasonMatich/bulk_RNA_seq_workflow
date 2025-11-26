@@ -24,9 +24,11 @@ knitDataTable <- function(df, tableName, sample_name, contrast, fileExtension, p
     # Print DataTable
     print(htmltools::tagList(table[[1]]))
     cat("\n\n")
-    
-    # Write csv to results with table contents 
-    write.csv(df[[1]], file = sprintf("../results/%s_%s_%s.csv", sample_name, gsub(" ", "_", tolower(contrast)), fileExtension))
+
+    # Write csv to results with table contents using robust path
+    csv_file <- sprintf("%s_%s_%s.csv", sample_name, gsub(" ", "_", tolower(contrast)), fileExtension)
+    csv_path <- file.path(project_dirs$results, csv_file)
+    write.csv(df[[1]], file = csv_path)
     }else{emptyTableMessage(tableName)}
   
   # clean up environment
