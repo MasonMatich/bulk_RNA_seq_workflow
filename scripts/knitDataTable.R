@@ -1,6 +1,8 @@
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# #        Print text and tables to console for bookdown rendering        # #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   #                                                                     #   #
+#   #       Print text and tables to console for bookdown rendering       #   #
+#   #                                                                     #   #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 knitDataTable <- function(df, tableName, sample_name, contrast, fileExtension, pageLength = 5){
   if(nrow(data.frame(df[[1]])) != 0){

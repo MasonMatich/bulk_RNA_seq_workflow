@@ -1,6 +1,9 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# #                       Translating Biological IDS                      # #
+#   #                                                                   #   #
+#   #                      Translating Biological IDS                   #   #
+#   #                                                                   #   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 # # # From WormBase to ENTREZID
 
 translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE, l2fc_filter, padj_filter) {
@@ -41,22 +44,22 @@ translateBioIDs <- function (DESeqResults.obj, bioID, return.success = TRUE, l2f
   
   # Subset for highly varirable genes
   variable.genes <- gene.df %>%
-    subset(abs(log2FoldChange) > l2fc_filter & padj < padj_filter & !isNA(padj))
+    subset(abs(log2FoldChange) > l2fc_filter & padj < padj_filter & !is.na(padj))
   rownames(variable.genes) <- NULL
-  
+
   # Subset for highly upregulated genes
   upregulated.genes <- gene.df %>%
-    subset(log2FoldChange > l2fc_filter & padj < padj_filter & !isNA(padj))
+    subset(log2FoldChange > l2fc_filter & padj < padj_filter & !is.na(padj))
   rownames(upregulated.genes) <- NULL
-  
+
   # Subset for highly downregulated genes
   downregulated.genes <- gene.df %>%
-    subset(log2FoldChange < -l2fc_filter & padj < padj_filter & !isNA(padj))
+    subset(log2FoldChange < -l2fc_filter & padj < padj_filter & !is.na(padj))
   rownames(downregulated.genes) <- NULL
-  
+
   # Subset for all genes (universe DataFrame)
   all.genes <- gene.df %>%
-    subset(!isNA(padj)) %>%
+    subset(!is.na(padj)) %>%
     arrange(desc(log2FoldChange))
   
   # Vectorized differentially expressed genes

@@ -59,80 +59,65 @@ if(all(colnames(count.matrix) != rownames(colData))){
 }
 ```
 
-Using the count matrix, column metadata, and user-inputed design formula (expressing the variables to be used in modeling), a DESeq data set is created. 
+Using the count matrix, column metadata, and user-inputed design formula (expressing the variables to be used in modeling), a DESeq data set is created.
 
-The experimental variable and the associated control/experimental conditions are given by the user in "ref_level_cond" and "ref_level_value" in the sampleInfo file respectively. 
+The experimental variable and the associated control/experimental conditions are given by the user in "ref_level_cond" and "ref_level_value" in the sampleInfo file respectively.
 
-Pre-filtering is performed, keeping only genes that have a count of at least 10 in a minimum number of samples. The minimum number of samples is decided by calculating the number of times the reference level value (control condition) is listed in the metadata with the assumption that experimental conditions will be repeated the same number of times. 
+Pre-filtering is performed, keeping only genes that have a count of at least 10 in a minimum number of samples. The minimum number of samples is decided by calculating the number of times the reference level value (control condition) is listed in the metadata with the assumption that experimental conditions will be repeated the same number of times.
 
 Standard differential expression analysis is performed with the DESeq function, and regularized log transformation (rlog) transforms count data to a log2 scale for PCA.
 ```{r DESeq2_run, warning=FALSE, results='hide', message=FALSE}
-# Create DESeq Data Set
-dds <- DESeqDataSetFromMatrix(
-  countData = count.matrix,
-  colData = colData,
-  design = as.formula(sample_params$design)
-)
-
 # Set Reference Level
 reflevelcond <- trimws(sample_params$ref_level_cond)
 reflevelvalue <- trimws(sample_params$ref_level_value)
-dds[[reflevelcond]] <- relevel(dds[[reflevelcond]], ref = reflevelvalue)
 
-# Subset out genes with low overall counts
-smallest.group.size <- length(grep(sprintf("^%s$",reflevelvalue), metadata[[reflevelcond]]))
-keep <- rowSums(counts(dds) >= 10) >= smallest.group.size
-dds <- dds[keep,]
+# Run DESeq2 analysis
+deseq_result <- runDESeq2Analysis(
+  count.matrix = count.matrix,
+  colData = colData,
+  design = sample_params$design,
+  ref_level_cond = reflevelcond,
+  ref_level_value = reflevelvalue,
+  metadata = metadata
+)
 
-# Run DESeq
-dds <- DESeq(dds)
-
-# Regularized Log Transform
-rld <- rlog(dds)
+dds <- deseq_result$dds
+rld <- deseq_result$rld
 ```
 
-If input data is designated to be batch corrected, the ComBat_seq() function from the SVA Bioconductor package is used. The batch (condition) to be regressed out is given in sampleInfo.csv as "batch_cond", and the sample information for this condition is taken from the metadata. 
+If input data is designated to be batch corrected, the ComBat_seq() function from the SVA Bioconductor package is used. The batch (condition) to be regressed out is given in sampleInfo.csv as "batch_cond", and the sample information for this condition is taken from the metadata.
 
 The group argument of ComBat_seq() specifies biological covariates, whos signals should be preserved in adjusted data. All conditions (columns) from the metadata which are not to be regressed out are passed to the group argument.
-Differential expression analysis is otherwise performed as described above on batch-corrected counts. 
+Differential expression analysis is otherwise performed as described above on batch-corrected counts.
 ```{r DESeq2_run_batch, warning=FALSE, results='hide', message=FALSE, echo = (as.logical(trimws(sample_params$batch_correct)))}
 if (as.logical(trimws(sample_params$batch_correct))) {
-  
+
   # Check that condition for batch correction matches column metadata
   if(all(trimws(sample_params$batch_cond) != colnames(metadata))){
     stop(sprintf("The given condition for batch correction:%s, doesn't match any prior conditions: %s", sample_params$batch_cond, colnames(metadata)))
   }
-  
+
   # Replicate / Batch Correction
   batch <- trimws(sample_params$batch_cond)
-  
+
   batch.correct <- ComBat_seq(
     counts = as.matrix(count.matrix),
     batch = metadata[[batch]],
     group = metadata[[colnames(metadata)[colnames(metadata) != batch]]]) %>%
     as.data.frame()
 
-  # Create DESeq Data Set
-  batch.correct.dds <- DESeqDataSetFromMatrix(
-    countData = batch.correct,
+  # Run DESeq2 analysis on batch-corrected counts
+  batch_deseq_result <- runDESeq2Analysis(
+    count.matrix = batch.correct,
     colData = colData,
-    design = as.formula(sample_params$design))
-  
-  # Set Factor Level
-  reflevelcond <- trimws(sample_params$ref_level_cond)
-  reflevelvalue <- trimws(sample_params$ref_level_value)
-  batch.correct.dds[[reflevelcond]] <- relevel(batch.correct.dds[[reflevelcond]], ref = reflevelvalue)
-  
-  # Subset out genes with low overall counts
-  smallest.group.size <- length(grep(sprintf("^%s$",reflevelvalue), metadata[[reflevelcond]]))
-  keep <- rowSums(counts(batch.correct.dds) >= 10) >= smallest.group.size
-  batch.correct.dds <- batch.correct.dds[keep,]
-  
-  # Run DESeq
-  batch.correct.dds <- DESeq(batch.correct.dds)
-  
-  # Regularized Log Transform
-  batch.correct.rld <- rlog(batch.correct.dds)
+    design = sample_params$design,
+    ref_level_cond = reflevelcond,
+    ref_level_value = reflevelvalue,
+    metadata = metadata
+  )
+
+  batch.correct.dds <- batch_deseq_result$dds
+  batch.correct.rld <- batch_deseq_result$rld
 }
 ```
 
@@ -267,10 +252,12 @@ rm(dds, batch.correct.dds, rld, batch.correct.rld, colData, count.matrix, comp, 
 ```{r compile_report, results='asis', warning=FALSE, message=FALSE, echo=FALSE}
 for (i in 1:length(results)){
   compileReport(
-    result.obj = results[[i]], 
-    contrast = sprintf("%s_%s_vs_%s", contrasts[[i]][1], contrasts[[i]][2], contrasts[[i]][3]), 
+    result.obj = results[[i]],
+    contrast = sprintf("%s_%s_vs_%s", contrasts[[i]][1], contrasts[[i]][2], contrasts[[i]][3]),
     sample_name = trimws(sample_params$sample_name),
-    l2fc_filter = 0.8,
-    padj_filter = 0.1)
+    l2fc_filter = as.numeric(trimws(sample_params$l2fc_filter)),
+    padj_filter = as.numeric(trimws(sample_params$padj_filter)),
+    semantic_data = semantic_data,
+    OrgDb = org.Ce.eg.db)
 }
 ```

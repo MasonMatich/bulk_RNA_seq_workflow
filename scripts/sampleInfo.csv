@@ -1,2 +1,2 @@
-sample_title, sample_name, salmon_merged_gene_counts_file_path, metadata_file_path, ref_level_cond, ref_level_value, design, batch_correct, batch_cond
-Chen & Phillips, chen_phillips, ../raw_data/chen_phillips/salmon.merged.gene_counts.tsv, scripts/chen_phillips_metadata.tsv, strain, wt, ~ replicate + strain, TRUE, replicate
+sample_title, sample_name, salmon_merged_gene_counts_file_path, metadata_file_path, ref_level_cond, ref_level_value, design, batch_correct, batch_cond, l2fc_filter, padj_filter
+Chen & Phillips, chen_phillips, ../raw_data/chen_phillips/salmon.merged.gene_counts.tsv, scripts/chen_phillips_metadata.tsv, strain, wt, ~ replicate + strain, TRUE, replicate, 0.8, 0.1

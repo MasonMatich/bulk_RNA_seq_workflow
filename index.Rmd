@@ -19,7 +19,7 @@ https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
 ```{r library_setup, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
 # # Library Preparation
 # Cran or base R packages required
-cranr <- c("bookdown", "dplyr", "DT", "knitr",  "kableExtra", "ashr", "htmltools", "ggplot2", "PCAtools", "knitrBootstrap", "stringr")
+cranr <- c("bookdown", "dplyr", "DT", "knitr", "kableExtra", "ashr","htmltools", "ggplot2", "PCAtools", "knitrBootstrap", "stringr", "tibble", "readr", "patchwork", "tidyverse", "RColorBrewer")
 
 # Check if the packages are installed if not install
 cranr.new <- cranr[!(cranr%in%installed.packages())]
@@ -28,7 +28,7 @@ if (length(cranr.new)) {
 }
 
 # List of bioconductor packages required
-bioconductor<-c("ReactomePA", "clusterProfiler", "DESeq2", "GOSemSim", "sva", "vsn", "org.Ce.eg.db", "EnhancedVolcano", "rrvgo")
+bioconductor<-c("ReactomePA", "clusterProfiler", "DESeq2", "GOSemSim", "sva", "vsn", "org.Ce.eg.db", "EnhancedVolcano", "rrvgo", "PCAtools")
 
 # Check if the packages were installed if not install
 bioconductor.new <- bioconductor[!(bioconductor%in%installed.packages())]
@@ -55,6 +55,7 @@ source("scripts/emptyTableMessage.R")
 source("scripts/visualizePCsByCondition.R")
 source("scripts/knitDataTable.R")
 source("scripts/reduceGORedundancy.R")
+source("scripts/runDESeq2Analysis.R")
 ```
 
 ```{r datatable_dependencies, warning=FALSE, message=FALSE, include=FALSE}

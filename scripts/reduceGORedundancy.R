@@ -1,8 +1,8 @@
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#   #                                                                   #   #
-#   #                       Reduce GO Redundancy                        #   #
-#   #                                                                   #   #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   #                                                                     #   #
+#   #                         Reduce GO Redundancy                        #   #
+#   #                                                                     #   #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 reduceGORedundancy <- function(GOResult, OrgDb, semdata = GOSemSim::godata(orgdb, ont = ont, keytype = keytype), threshold = .7){
   # if semdata isn't provided, generate it

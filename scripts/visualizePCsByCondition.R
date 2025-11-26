@@ -1,9 +1,8 @@
-library("patchwork")
-library("tidyverse")
-library("dplyr")
-library("PCAtools")
-library("stringr")
-library("RColorBrewer")
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   #                                                                   #   #
+#   #             Visualize PCA by Experimental Condition               #   #
+#   #                                                                   #   #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 visualizePCsByCondition <- function(rlog, metadata, title) {
 

@@ -1,18 +1,13 @@
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# #         Calls translateBioIDs.R and geneOntologyAnalysis.R        # #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   #                                                                     #   #
+#   #         Calls translateBioIDs.R and geneOntologyAnalysis.R          #   #
+#   #                                                                     #   #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter, padj_filter){
+compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter, padj_filter, semantic_data, OrgDb){
   
   # Create comment structure for bookdown render
-  cat(sprintf("## %s\n\n", contrast))
-
-  # Show exact call which invoked function
-  call_txt <- paste(deparse(match.call()), collapse = "\n")
-  cat("**Inputs for function call:**\n\n")
-  cat("```r\n")
-  cat(call_txt, "\n\n")
-  cat("```\n\n")
+  cat(sprintf("## %s {.contrast}\n\n", contrast))
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   #   #                                                                   #   #
@@ -31,16 +26,22 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   )
   
   # # Volcano Plot
+  volcano_file <- sprintf("%s_%s_volcano.png", sample_name, gsub(" ", "_", tolower(contrast)))
+  volcano_path <- file.path("..", "figures", volcano_file)
+
   volcano <- EnhancedVolcano(
     result.obj$DataFrame,
-    lab = result.obj$DataFrame[,1],
+    lab = rownames(result.obj$DataFrame),
     x = 'log2FoldChange',
-    y = 'pvalue'
+    y = 'padj',
+    title = contrast,
+    subtitle = sprintf('padj < %s, |log2FC| > %s', padj_filter, l2fc_filter),
+    pCutoff = padj_filter,
+    FCcutoff = l2fc_filter
   )
-  volcano_file <- sprintf("%s_%s_volcano.png", sample_name, gsub(" ", "_", tolower(contrast)))
-  
-  ggsave(paste0("../figures/", volcano_file), volcano, height = 12, width = 10, units = "in")
-  cat(sprintf("![](%s)\n\n", paste0("figures/", volcano_file)))
+
+  ggsave(volcano_path, volcano, height = 12, width = 10, units = "in", dpi = 300)
+  cat(sprintf('<img src="%s" width="80%%"/>\n\n', paste0("figures/", volcano_file)))
   
   # # MA Plot
   plotMA(
@@ -69,14 +70,17 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   # Run gruopGO(), enrichGO(), gseGO(), and goplot()
   go.result.list <- callClusterProfilerFunc(
     result.obj.list = result.obj.list,
-    OrgDb = org.Ce.eg.db)
+    OrgDb = OrgDb,
+    semantic_data = semantic_data)
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # # #             Dysregulated Reactome Pathway GSE, GO GSE             # # # 
   cat(paste0("\n\n#### Dysregulated\n\n"))
   
   # GO GSE
-  cat("\n\n##### Gene Ontology GSEA {.analysis}\n\n")
+  # Open the GO GSEA div container (for styling)
+  cat('<div class="analysis">\n\n')
+  cat("\n\n##### Gene Ontology GSEA\n\n")
   
   if (any(!is.na(go.result.list$go_gse_red[[1]])) && nrow(go.result.list$go_gse_red[[1]]) > 0) {
     treemapPlot(go.result.list$go_gse_red[[1]])
@@ -93,25 +97,30 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   # # # GSEA plot condiitonal rendering
   if (nrow(go.result.list$go_gse[[1]]) > 0){
     # Tabset for GSEA plots
-    cat("###### {.tabset .tabset-dropdown}\n\n")
-    
-    # Print GSEA plot for each set identified 
+    cat("##### {.tabset .tabset-dropdown}\n\n")
+
+    # Print GSEA plot for each set identified
     for (i in 1:nrow(data.frame(go.result.list$go_gse[[1]]))) {
       if (i > 25) {break} # Dont print over 30 plots
-      cat(sprintf("####### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
-      
+      cat(sprintf("###### %s \n\n", go.result.list$go_gse[[1]]$Description[i]))
+
       print(gseaplot(
-        go.result.list$go_gse[[1]], 
-        by = "all", 
-        title = go.result.list$go_gse[[1]]$Description[i], 
+        go.result.list$go_gse[[1]],
+        by = "all",
+        title = go.result.list$go_gse[[1]]$Description[i],
         geneSetID = go.result.list$go_gse[[1]]$ID[i]))
-      
+
       cat("\n\n")
     }
-  }  
+  }
+  cat('\n\n</div>\n\n')
   
-  # Reactome Pathway GSE
-  cat("\n\n##### Reactome Pathway GSEA {.analysis}\n\n")
+  
+  # Reactome Pathway GSEA
+  # Open the Reactome Pathway GSEA div container (for styling)
+  cat('<div class="analysis">\n\n')
+  
+  cat("\n\n##### Reactome Pathway GSEA\n\n")
   
   knitDataTable(
     df = go.result.list$react_gse,
@@ -124,22 +133,25 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   # # # GSEA plot condiitonal rendering of RP GSEA plots
   if (nrow(go.result.list$react_gse[[1]]) > 0){
     # Tabset for Reactome GSEA plots
-    cat("###### {.tabset .tabset-dropdown}\n\n")
-    
-    # Print GSEA plot for each react pathway set identified 
+    cat("##### {.tabset .tabset-dropdown}\n\n")
+
+    # Print GSEA plot for each react pathway set identified
     for (i in 1:nrow(data.frame(go.result.list$react_gse[[1]]))) {
       if (i > 25) {break} # Dont print over 30 plots
-      cat(sprintf("####### %s \n\n", go.result.list$react_gse[[1]]$Description[i]))
-      
+      cat(sprintf("###### %s \n\n", go.result.list$react_gse[[1]]$Description[i]))
+
       print(gseaplot(
-        go.result.list$react_gse[[1]], 
-        by = "all", 
-        title = go.result.list$react_gse[[1]]$Description[i], 
+        go.result.list$react_gse[[1]],
+        by = "all",
+        title = go.result.list$react_gse[[1]]$Description[i],
         geneSetID = go.result.list$react_gse[[1]]$ID[i]))
-      
+
       cat("\n\n")
     }
   }
+  
+  # Close the Reactome Pathway GSEA div container (for styling)
+  cat('\n\n</div>\n\n')
   
 
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
