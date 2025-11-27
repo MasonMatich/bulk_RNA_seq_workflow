@@ -161,16 +161,6 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   # # #    Upregulated GO classification, GO over-representation, RP over-representation    # # #
   cat(paste0("\n\n#### Upregulated\n\n"))
   
-  # GO classification
-  cat("\n\n##### GO Classification {.analysis}\n\n")
-  knitDataTable(
-    df = go.result.list$go_class_upreg,
-    tableName = " GO Classification of Upregulated Genes",
-    sample_name = sample_name,
-    contrast = contrast,
-    fileExtension = "GO_classification_upreg"
-  )
-  
   # GO over-representation
   cat("\n\n##### GO Over-representation {.analysis}\n\n")
   # # Treemap Plot of simplified terms
@@ -202,17 +192,6 @@ compileReport <- function(result.obj, contrast, sample_name = NULL, l2fc_filter,
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # # #    Downregulated GO classification, GO over-representation, RP over-representation    # # #
   cat(paste0("\n\n#### Downregulated\n\n"))
-  
-  # GO classification
-  cat("\n\n##### GO Classification {.analysis}\n\n")
-  
-  knitDataTable(
-    df = go.result.list$go_class_downreg,
-    tableName = " GO Classification of Downregulated Genes",
-    sample_name = sample_name,
-    contrast = contrast,
-    fileExtension = "GO_classification_downreg"
-  )
 
   # GO over-representation
   cat("\n\n##### GO Over-representation {.analysis}\n\n")
