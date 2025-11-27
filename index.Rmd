@@ -1,7 +1,6 @@
 ---
 params:
   dynamic_title: "Bulk RNA-seq Report"
-  project: 
   params_file: "sample_params"
 title: "`r params$dynamic_title`"
 author: "Mason Matich (masonmatich@gmail.com)"
@@ -20,7 +19,7 @@ https://learn.gencore.bio.nyu.edu/rna-seq-analysis/gene-set-enrichment-analysis/
 ```{r library_setup, warning=FALSE, message=FALSE, results='hide', echo=FALSE}
 # # Library Preparation
 # Cran or base R packages required
-cranr <- c("bookdown", "dplyr", "DT", "knitr",  "kableExtra", "ashr", "htmltools", "ggplot2", "PCAtools", "knitrBootstrap", "stringr")
+cranr <- c("bookdown", "dplyr", "DT", "knitr", "kableExtra", "ashr","htmltools", "ggplot2", "PCAtools", "knitrBootstrap", "stringr", "tibble", "readr", "patchwork", "tidyverse", "RColorBrewer", "here")
 
 # Check if the packages are installed if not install
 cranr.new <- cranr[!(cranr%in%installed.packages())]
@@ -29,7 +28,7 @@ if (length(cranr.new)) {
 }
 
 # List of bioconductor packages required
-bioconductor<-c("ReactomePA", "clusterProfiler", "DESeq2", "GOSemSim", "sva", "vsn", "org.Ce.eg.db", "EnhancedVolcano", "rrvgo")
+bioconductor<-c("ReactomePA", "clusterProfiler", "DESeq2", "GOSemSim", "sva", "vsn", "org.Ce.eg.db", "EnhancedVolcano", "rrvgo", "PCAtools")
 
 # Check if the packages were installed if not install
 bioconductor.new <- bioconductor[!(bioconductor%in%installed.packages())]
@@ -47,7 +46,36 @@ sapply(bioconductor, library, character.only = TRUE)
 rm(bioconductor, bioconductor.new, cranr, cranr.new)
 ```
 
-```{r dependencies, warning=FALSE, message=FALSE, include=FALSE}
+```{r setup_paths, warning=FALSE, message=FALSE, echo=FALSE}
+# # Set up robust project paths using here package
+project_root <- here::here()
+
+# Define all project directories
+dirs <- list(
+  root = project_root,
+  scripts = file.path(project_root, "scripts"),
+  figures = file.path(project_root, "figures"),
+  results = file.path(project_root, "results"),
+  raw_data = file.path(project_root, "raw_data")
+)
+
+# Make dirs available globally for child documents
+assign("project_dirs", dirs, envir = .GlobalEnv)
+```
+
+```{r function_setup, warning=FALSE, message=FALSE, echo=FALSE}
+# # Read in functions using robust paths
+source(file.path(project_dirs$scripts, "translateBioIDs.R"))
+source(file.path(project_dirs$scripts, "callClusterProfilerFunc.R"))
+source(file.path(project_dirs$scripts, "compileReport.R"))
+source(file.path(project_dirs$scripts, "emptyTableMessage.R"))
+source(file.path(project_dirs$scripts, "visualizePCsByCondition.R"))
+source(file.path(project_dirs$scripts, "knitDataTable.R"))
+source(file.path(project_dirs$scripts, "reduceGORedundancy.R"))
+source(file.path(project_dirs$scripts, "runDESeq2Analysis.R"))
+```
+
+```{r datatable_dependencies, warning=FALSE, message=FALSE, include=FALSE}
 # Loads dependences needed to render other datatables
 DT::datatable(data.frame(x = c(1), y = c(1)), extensions = 'Buttons', rownames = FALSE,options = list(buttons = c('copy', 'csv', 'excel', 'pdf')))
 
@@ -57,64 +85,141 @@ semantic_data <- GOSemSim::godata(org.Ce.eg.db, ont="BP", keytype = "ENTREZID")
 
 ```{r params_setup, warning=FALSE, message=FALSE, echo=FALSE}
 # # Read in Params
-# sample_params <- read.csv("scripts/inputs/sampleInfo.csv")
-# metadata <- read.table("scripts/inputs/chen_phillips_metadata.txt", header = T)
-sample_params <- read.csv(params$params_file)
+all_sample_params <- read.csv(params$params_file)
+#all_sample_params <- read.csv("scripts/sampleInfo.csv")
 ```
 
-```{r function_setup, warning=FALSE, message=FALSE, echo=FALSE}
-# # Read in functions
-source("scripts/translateBioIDs.R")
-source("scripts/callClusterProfilerFunc.R")
-source("scripts/compileReport.R")
-source("scripts/emptyTableMessage.R")
-source("scripts/visualizePCsByCondition.R")
-source("scripts/knitDataTable.R")
-source("scripts/reduceGORedundancy.R")
-source("scripts/DEAnalysis.R")
-source("scripts/PCAAnalysis.R")
-```
+```{r create_directories, warning=FALSE, message=FALSE, echo=FALSE}
+# # Create output directories if they don't exist
+output_dir_paths <- c(project_dirs$figures, project_dirs$results)
 
-```{r compile_report, warning=FALSE, message=FALSE, echo=FALSE}
-for (i in 1:nrow(sample_params)){
-  
-  knitr::asis_output()
-  # Report Inputs
-  single.dataset <- sample_params[i,]
-  cat("\n\n## Inputs Received\n\nInformation received from the csv samplesheet:\n\n")
-  datatable(single.dataset, rownames = FALSE, options = list(dom = "rt", scrollX = TRUE))
-  cat("Metadata information received from the tsv table:\n\n")
-  
-  metadata <- read.table(trimws(single.dataset$metadata), header = T)
-  knitr::kable(metadata)
-  
-  # Run DEG analysis with DESeq2
-  DE.results <- DEAnalysis(
-    dataset = single.dataset
-  )
-  
-  # Run PCA with PCAtools
-  PCAAnalysis(
-    dataset = single.dataset,
-    metadata = DE.results[["metadata"]],
-    rld = DE.results[["rld"]],
-    batch.rld = DE.results[["batch correct rld"]]
-  )
-  
-  # Run Cluster Profiler and report results
-  for (i in names(DE.results[["results"]])){
-    compileReport(
-      result.obj = DE.results[["results"]][[i]], 
-      contrast = i, 
-      l2fc_filter = 0.8,
-      padj_filter = 0.1)
+for (dir_path in output_dir_paths) {
+  if (!dir.exists(dir_path)) {
+    dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+    cat(sprintf("✓ Created directory: %s\n", basename(dir_path)))
   }
-  
-  # Cleanup
-  rm(single.dataset, DE.results)
+}
+
+rm(output_dir_paths, dir_path)
+```
+
+# Inputs Received {.title}
+Information received from the csv samplesheet:
+```{r report_inputs, warning=FALSE, message=FALSE, echo=FALSE}
+datatable(as.data.frame(all_sample_params), rownames = FALSE, options = list(dom = "rt", scrollX = TRUE))
+```
+
+**Validating input parameters...**
+```{r validate_parameters, warning=FALSE, message=FALSE, echo=FALSE}
+# # Validate all parameters from sampleInfo.csv
+
+for (i in 1:nrow(all_sample_params)) {
+  sample_params <- all_sample_params[i,]
+  sample_name <- trimws(sample_params$sample_name)
+
+  # Validate design formula
+  tryCatch({
+    as.formula(trimws(sample_params$design))
+  }, error = function(e) {
+    stop(sprintf("❌ Invalid design formula for sample '%s' (row %d): %s\n   Error: %s",
+                 sample_name, i, sample_params$design, e$message))
+  })
+
+  # Validate numeric parameters
+  l2fc <- as.numeric(trimws(sample_params$l2fc_filter))
+  padj <- as.numeric(trimws(sample_params$padj_filter))
+
+  if (is.na(l2fc) || l2fc < 0) {
+    stop(sprintf("❌ Invalid l2fc_filter for sample '%s': %s (must be >= 0)",
+                 sample_name, sample_params$l2fc_filter))
+  }
+
+  if (is.na(padj) || padj <= 0 || padj > 1) {
+    stop(sprintf("❌ Invalid padj_filter for sample '%s': %s (must be in range (0, 1])",
+                 sample_name, sample_params$padj_filter))
+  }
+
+  # Validate boolean parameter
+  batch_correct <- trimws(sample_params$batch_correct)
+  if (!tolower(batch_correct) %in% c("true", "false")) {
+    stop(sprintf("❌ Invalid batch_correct for sample '%s': %s (must be TRUE or FALSE)",
+                 sample_name, sample_params$batch_correct))
+  }
+
+  # Validate required fields are not empty
+  required_fields <- c("sample_title", "sample_name", "salmon_merged_gene_counts_file_path",
+                      "metadata_file_path", "ref_level_cond", "ref_level_value", "design")
+
+  for (field in required_fields) {
+    value <- trimws(as.character(sample_params[[field]]))
+    if (is.na(value) || value == "") {
+      stop(sprintf("❌ Required field '%s' is empty for sample row %d", field, i))
+    }
+  }
+
+  cat(sprintf("✓ Sample %d ('%s') parameters validated\n", i, sample_name))
+}
+rm(i, sample_params, sample_name, l2fc, padj, batch_correct, required_fields, field, value)
+```
+**All parameters validated successfully!**
+
+```{r run_all_samples, warning=FALSE, message=FALSE, echo=FALSE, results='asis'}
+# Loop through each sample
+for (sample_idx in 1:nrow(all_sample_params)) {
+
+  # Set parameters for this iteration
+  sample_params <- all_sample_params[sample_idx, ]
+
+  # Validate metadata file exists
+  metadata_file <- trimws(sample_params$metadata_file_path)
+  if (!file.exists(metadata_file)) {
+    stop(sprintf("❌ Metadata file not found for sample %d: %s\nPlease check the path in sampleInfo.csv",
+                 sample_idx, metadata_file))
+  }
+
+  metadata <- read.table(metadata_file, header = T)
+
+  # Render the child document
+  res <- knitr::knit_child(
+    file.path(project_dirs$scripts, 'analysis.Rmd'),
+    envir = environment(),
+    quiet = TRUE
+  )
+
+  cat(res, sep = '\n')
+
+  # Clean up
+  rm(sample_params, res, metadata, metadata_file)
 }
 ```
 
-```{r cleanup, warning=FALSE, message=FALSE, echo=FALSE}
-rm(contrasts, results, dds.for.analysis, gene.reference, i, sample_params, callClusterProfilerFunc, compileReport, translateBioIDs, emptyTableMessage, knitDataTable, visualizePCsByCondition)
+```{r cleanup_3, warning=FALSE, message=FALSE, echo=FALSE}
+rm(contrasts, results, dds.for.analysis, gene.reference, i, callClusterProfilerFunc, compileReport, translateBioIDs, emptyTableMessage, knitDataTable, visualizePCsByCondition)
+```
+
+# Session Information {.title}
+
+This section provides complete information about the R environment, package versions, and system configuration used to generate this report. This information is critical for reproducing the analysis.
+
+**R Version and Platform:**
+
+```{r session_info, warning=FALSE, message=FALSE, echo=FALSE, results='asis'}
+cat("```r\n")
+print(sessionInfo())
+cat("\n```\n\n")
+
+cat("**Package Versions:**\n\n")
+cat("```r\n")
+installed_packages <- installed.packages()[,c("Package", "Version")]
+key_packages <- c("DESeq2", "clusterProfiler", "EnhancedVolcano", "ReactomePA",
+                  "org.Ce.eg.db", "PCAtools", "bookdown", "dplyr", "ggplot2")
+key_pkg_info <- installed_packages[installed_packages[,"Package"] %in% key_packages,]
+print(key_pkg_info)
+cat("\n```\n\n")
+
+cat("**Analysis Parameters:**\n\n")
+cat("```r\n")
+cat(sprintf("Report generated: %s\n", Sys.time()))
+cat(sprintf("Working directory: %s\n", getwd()))
+cat("\n```\n")
 ```

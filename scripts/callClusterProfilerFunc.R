@@ -1,8 +1,10 @@
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# #         Gene Ontology Enrichment Analysis         # #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   #                                                                     #   #
+#   #                    Gene Ontology Enrichment Analysis                #   #
+#   #                                                                     #   #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-callClusterProfilerFunc <- function(result.obj.list, OrgDb){
+callClusterProfilerFunc <- function(result.obj.list, OrgDb, semantic_data){
   
   # # Extract filtered lists from list container
   geneNames.variable <- result.obj.list$variable_genes[,1]
@@ -13,7 +15,7 @@ callClusterProfilerFunc <- function(result.obj.list, OrgDb){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # #                       Analysis of Upregulated Genes                   # #
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
   ## RUN WITH BP ONTOLOGY
   # # GO Classification # #
   go_class_upreg <- groupGO(
@@ -69,7 +71,6 @@ callClusterProfilerFunc <- function(result.obj.list, OrgDb){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # #                      Analysis of Downregulated Genes                  # #
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   
   # # GO Classification # #
   go_class_downreg <- groupGO(
@@ -125,7 +126,7 @@ callClusterProfilerFunc <- function(result.obj.list, OrgDb){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # #                    GO Gene Set Enrichment Analysis                    # #
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
   go_gene_set_enrichment <- gseGO(
     geneList = geneList,
         OrgDb = OrgDb,
@@ -136,7 +137,7 @@ callClusterProfilerFunc <- function(result.obj.list, OrgDb){
         verbose = FALSE
         )
   
-  # #  Reduce GO Redundancy
+  # # # Reduce GO Redundancy
   if(length(go_gene_set_enrichment$ID) > 2){
     gsea_reduced <- reduceGORedundancy(
       GOResult = go_gene_set_enrichment,
@@ -160,7 +161,7 @@ callClusterProfilerFunc <- function(result.obj.list, OrgDb){
   
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # #                       Reactome Enrichment Analysis                    # #
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
   reactome_gene_set_enrichment <- gsePathway(
     geneList = geneList, 
@@ -175,9 +176,10 @@ callClusterProfilerFunc <- function(result.obj.list, OrgDb){
   # change Reactome GSE gene IDs from ENTREZID to symbol
   reactome_gene_set_enrichment <- setReadable(reactome_gene_set_enrichment, OrgDb = OrgDb, keyType="ENTREZID")
   
+  
   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
   # #                             Return Results                            # #
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
   
   go_results <- list(
     list(go_class_upreg),

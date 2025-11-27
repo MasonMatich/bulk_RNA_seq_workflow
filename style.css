@@ -45,16 +45,6 @@ table.dataTable {
   margin: 0;
 }
 
-.level2 h2{
-  color: #337AB7;
-  text-align: center;
-  border: solid 5px #337AB7;
-  border-radius: 0 10px 10px 0;
-  padding: 3px 0;
-  margin-left: -8px;
-  font-size: 24px;
-}
-
 .nav-tabs {
   padding: 0 3px !important;
 }
@@ -64,14 +54,21 @@ table.dataTable {
 }
 
 .tab-content {
-  padding: 0 3px !important;
+  padding: 5px !important;
+  background-color: #f7f7f7;
+  border-width: 0 1px 1px 1px;
+  border-style: solid;
+  border-color: #ddd;
+}
+.level5> .tab-content{
+  border: none !important;
 }
 
 .tab-pane {
   padding: 0 0 0 3px;
 }
 
-.analysisreport>.tab-content>.level3.active {
+.tab-content.level4>.active {
   background-color: #f7f7f7;
   padding: 1em;
   border-width: 0 1px 1px 1px;
@@ -90,15 +87,16 @@ table.dataTable {
 
 .tab-content>.active .level5{
   padding: 0 0 3px 3px;
-  border: none;
 }
 
 p:has(img), .section.level4:has(img), .section.level3:has(img){
   text-align: center;
 }
 
-img {
-  padding: 4px 0 !important;
+.analysis img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .nav-tabs>li>a:hover {
@@ -110,14 +108,32 @@ img {
   background-color: #f7f7f7;
 }
 
-.level4>h4{
-  font-size: 16px;
-  color: #337AB7;
-  margin: 0;
-  padding: 10px 0 !important;
-  text-align: center;
+.analysis {
+  margin: 10px 5px;
+  border: 2px dashed #ccc;
+  padding: 2px;
 }
 
-.datatables {
-    text-align: left !important;
+.analysis h1, .analysis h2, .analysis h3, .analysis h4, .analysis h5, .analysis h6 {
+  color: #337AB7;
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 10px 0;
+}
+
+h2{
+  color: #337AB7;
+  text-align: center;
+  border: solid 5px #337AB7;
+  border-radius: 0 10px 10px 0;
+  padding: 5px 0 !important;
+  margin-left: -8px;
+  font-size: 24px;
+  background-color: #f7f7f7;
+}
+
+h3 {
+  text-align: center;
+  color: #337AB7;
 }
